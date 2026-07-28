@@ -192,7 +192,6 @@ export class GenerateCardsModal extends Modal {
         slider
           .setLimits(13, 24, 1)
           .setValue(this.values.fontSize)
-          .setDynamicTooltip()
           .onChange((value) => {
             this.values.fontSize = value;
           });
@@ -205,7 +204,6 @@ export class GenerateCardsModal extends Modal {
         slider
           .setLimits(1.2, 2.4, 0.1)
           .setValue(this.values.lineHeight)
-          .setDynamicTooltip()
           .onChange((value) => {
             this.values.lineHeight = value;
           });
@@ -218,7 +216,6 @@ export class GenerateCardsModal extends Modal {
         slider
           .setLimits(0, 2, 0.1)
           .setValue(this.values.letterSpacing)
-          .setDynamicTooltip()
           .onChange((value) => {
             this.values.letterSpacing = value;
           });
@@ -231,7 +228,6 @@ export class GenerateCardsModal extends Modal {
         slider
           .setLimits(24, 72, 1)
           .setValue(this.values.textPadding)
-          .setDynamicTooltip()
           .onChange((value) => {
             this.values.textPadding = value;
           });

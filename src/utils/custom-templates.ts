@@ -80,11 +80,13 @@ export function isCustomTemplate(
         typeof item[key] === "number" &&
         Number.isFinite(item[key])
     ) &&
-    ["bgColor", "textColor", "accentColor"].every(
-      (key) =>
-        typeof item[key] === "string" &&
-        /^#[0-9a-f]{6}$/i.test(item[key] as string)
-    ) &&
+    ["bgColor", "textColor", "accentColor"].every((key) => {
+      const value = item[key];
+      return (
+        typeof value === "string" &&
+        /^#[0-9a-f]{6}$/i.test(value)
+      );
+    }) &&
     typeof item.fontFamily === "string"
   );
 }

@@ -1,7 +1,7 @@
 {
   "id": "xhs-text-card",
   "name": "Text to Card",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "minAppVersion": "1.12.7",
   "description": "Generate multi-page Xiaohongshu-style image cards from the current note or selection.",
   "author": "monvhh",

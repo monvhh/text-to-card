@@ -131,7 +131,7 @@ export class CardGenerator {
 
     await document.fonts?.ready;
 
-    const splitter = new globalThis.XHS_TEXT_CARD_CORE.TextSplitter(
+    const splitter = new window.XHS_TEXT_CARD_CORE.TextSplitter(
       config,
       options.templateId
     );
@@ -163,8 +163,8 @@ export class CardGenerator {
       normalizePath(trimmed)
     );
 
-    return file && "extension" in file
-      ? this.app.vault.getResourcePath(file as TFile)
+    return file instanceof TFile
+      ? this.app.vault.getResourcePath(file)
       : "";
   }
 
@@ -191,7 +191,7 @@ export class CardGenerator {
       options.outputNameSuffix
     );
     const renderer =
-      new globalThis.XHS_TEXT_CARD_CORE.CanvasRenderer();
+      new window.XHS_TEXT_CARD_CORE.CanvasRenderer();
     const files: string[] = [];
 
     for (let index = 0; index < pages.length; index += 1) {
@@ -251,7 +251,7 @@ export class CardGenerator {
     }
 
     const renderer =
-      new globalThis.XHS_TEXT_CARD_CORE.CanvasRenderer();
+      new window.XHS_TEXT_CARD_CORE.CanvasRenderer();
 
     return renderer.render({
       layouts,
@@ -332,7 +332,7 @@ export class CardGenerator {
     );
 
     for (const file of stale) {
-      await this.app.vault.delete(file);
+      await this.app.fileManager.trashFile(file);
     }
   }
 

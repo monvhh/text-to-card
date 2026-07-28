@@ -2,7 +2,8 @@ import {
   Notice,
   PluginSettingTab,
   Setting,
-  type App
+  type App,
+  type SettingDefinitionItem
 } from "obsidian";
 import type XhsTextCardPlugin from "../main";
 import type {
@@ -28,8 +29,38 @@ export class XhsTextCardSettingTab extends PluginSettingTab {
     super(app, plugin);
   }
 
+  getSettingDefinitions(): SettingDefinitionItem[] {
+    return [
+      {
+        name: "Text to Card 设置",
+        aliases: [
+          "默认模板",
+          "图片格式",
+          "输出目录",
+          "封面",
+          "签名",
+          "水印",
+          "字体",
+          "Logo",
+          "页码",
+          "文件名标题",
+          "品牌预设",
+          "自定义模板",
+          "模板收藏"
+        ],
+        render: (setting) => {
+          setting.settingEl.empty();
+          this.renderAll(setting.settingEl);
+        }
+      }
+    ];
+  }
+
   display(): void {
-    const { containerEl } = this;
+    this.renderAll(this.containerEl);
+  }
+
+  private renderAll(containerEl: HTMLElement): void {
     containerEl.empty();
 
     new Setting(containerEl)
@@ -295,6 +326,16 @@ export class XhsTextCardSettingTab extends PluginSettingTab {
     this.renderFavorites(containerEl);
   }
 
+  private refreshSettings(): void {
+    const update = Reflect.get(this, "update");
+
+    if (typeof update === "function") {
+      Reflect.apply(update, this, []);
+    } else {
+      this.renderAll(this.containerEl);
+    }
+  }
+
   private renderBrandPresets(containerEl: HTMLElement): void {
     new Setting(containerEl)
       .setName("品牌预设")
@@ -334,7 +375,7 @@ export class XhsTextCardSettingTab extends PluginSettingTab {
           });
           this.plugin.settings.brandPresetId = id;
           await this.plugin.saveSettings();
-          this.display();
+          this.refreshSettings();
         });
       });
 
@@ -357,7 +398,7 @@ export class XhsTextCardSettingTab extends PluginSettingTab {
               logoPath: preset.logoPath
             });
             await this.plugin.saveSettings();
-            this.display();
+            this.refreshSettings();
           });
         })
         .addExtraButton((button) => {
@@ -375,7 +416,7 @@ export class XhsTextCardSettingTab extends PluginSettingTab {
                 this.plugin.settings.brandPresetId = "";
               }
               await this.plugin.saveSettings();
-              this.display();
+              this.refreshSettings();
             });
         });
     }
@@ -414,7 +455,7 @@ export class XhsTextCardSettingTab extends PluginSettingTab {
           this.plugin.settings.templateSelection =
             `custom:${custom.id}`;
           await this.plugin.saveSettings();
-          this.display();
+          this.refreshSettings();
         });
       });
 
@@ -440,7 +481,7 @@ export class XhsTextCardSettingTab extends PluginSettingTab {
             );
             await this.plugin.saveSettings();
             new Notice(`已导入 ${templates.length} 个模板`);
-            this.display();
+            this.refreshSettings();
           } catch (error) {
             new Notice(
               `导入失败：${
@@ -485,7 +526,7 @@ export class XhsTextCardSettingTab extends PluginSettingTab {
                   (item) => item.id !== template.id
                 );
               await this.plugin.saveSettings();
-              this.display();
+              this.refreshSettings();
             });
         });
     }
@@ -523,7 +564,7 @@ export class XhsTextCardSettingTab extends PluginSettingTab {
               ? favorites.filter((id) => id !== selected)
               : [...favorites, selected];
           await this.plugin.saveSettings();
-          this.display();
+          this.refreshSettings();
         });
       });
   }

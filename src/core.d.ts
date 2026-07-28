@@ -25,6 +25,10 @@ interface XhsCore {
 
 declare global {
   var XHS_TEXT_CARD_CORE: XhsCore;
+
+  interface Window {
+    XHS_TEXT_CARD_CORE: XhsCore;
+  }
 }
 
 export {};

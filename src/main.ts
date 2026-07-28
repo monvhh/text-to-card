@@ -56,7 +56,7 @@ export default class XhsTextCardPlugin extends Plugin {
     );
 
     this.addCommand({
-      id: "generate-xhs-text-cards",
+      id: "generate-cards",
       name: "生成小红书卡片",
       editorCallback: (editor, view) => {
         if (!view.file) {
@@ -69,7 +69,7 @@ export default class XhsTextCardPlugin extends Plugin {
     });
 
     this.addCommand({
-      id: "batch-generate-xhs-text-cards",
+      id: "batch-generate-cards",
       name: "批量生成小红书卡片",
       callback: () => this.openBatchGenerator()
     });
@@ -237,8 +237,7 @@ export default class XhsTextCardPlugin extends Plugin {
     const failures: string[] = [];
 
     try {
-      for (let fileIndex = 0; fileIndex < files.length; fileIndex += 1) {
-        const file = files[fileIndex]!;
+      for (const [fileIndex, file] of files.entries()) {
         const markdown = await this.app.vault.cachedRead(file);
         const frontmatter =
           this.app.metadataCache.getFileCache(file)?.frontmatter;

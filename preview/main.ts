@@ -153,7 +153,7 @@ let currentPages: unknown[][] = [];
 let currentConfig: Record<string, unknown> = {};
 const expandedPageIndexes = new Set<number>();
 let currentRenderer =
-  new globalThis.XHS_TEXT_CARD_CORE.CanvasRenderer();
+  new window.XHS_TEXT_CARD_CORE.CanvasRenderer();
 let renderTimer: number | undefined;
 let pageOverflow = false;
 let previewBrandPresets: PreviewBrandPreset[] = [];
@@ -162,7 +162,7 @@ initialize();
 
 function initialize(): void {
   for (const templateId of TEMPLATE_IDS) {
-    const option = document.createElement("option");
+    const option = createHtmlElement("option");
     option.value = templateId;
     option.textContent = getTemplateName(templateId);
     templateSelect.append(option);
@@ -252,7 +252,7 @@ function registerEvents(): void {
     activeTemplateId = templateSelect.value as TemplateId;
     applyTemplateDefaults(activeTemplateId);
     currentRenderer =
-      new globalThis.XHS_TEXT_CARD_CORE.CanvasRenderer();
+      new window.XHS_TEXT_CARD_CORE.CanvasRenderer();
     handleSettingChange();
   });
 
@@ -382,7 +382,7 @@ async function renderPreview(): Promise<void> {
     };
 
     const splitter =
-      new globalThis.XHS_TEXT_CARD_CORE.TextSplitter(
+      new window.XHS_TEXT_CARD_CORE.TextSplitter(
         config,
         activeTemplateId
       );
@@ -459,16 +459,16 @@ function createCardNode(
   totalCount: number,
   layouts: unknown[]
 ): HTMLElement {
-  const article = document.createElement("article");
+  const article = createHtmlElement("article");
   article.className = "card-item";
 
-  const header = document.createElement("div");
+  const header = createHtmlElement("div");
   header.className = "card-item-header";
 
-  const label = document.createElement("span");
+  const label = createHtmlElement("span");
   label.textContent = `第 ${index + 1} 张 / 共 ${totalCount} 张`;
 
-  const downloadButton = document.createElement("button");
+  const downloadButton = createHtmlElement("button");
   downloadButton.type = "button";
   downloadButton.className = "card-download";
   downloadButton.textContent = "下载";
@@ -476,7 +476,7 @@ function createCardNode(
     void downloadPage(index);
   });
 
-  const actions = document.createElement("div");
+  const actions = createHtmlElement("div");
   actions.className = "card-item-actions";
   actions.append(
     createPageAction("←", index > 0, () => {
@@ -526,7 +526,7 @@ function createBlockEditor(
   pageIndex: number,
   page: unknown[]
 ): HTMLElement {
-  const details = document.createElement("details");
+  const details = createHtmlElement("details");
   details.className = "card-block-editor";
   details.open = expandedPageIndexes.has(pageIndex);
   details.addEventListener("toggle", () => {
@@ -537,21 +537,21 @@ function createBlockEditor(
     }
   });
 
-  const summary = document.createElement("summary");
+  const summary = createHtmlElement("summary");
   summary.className = "card-block-summary";
   summary.append(
     document.createTextNode(`调整内容（${page.length} 块）`),
     createElement("span", "高级", "card-block-hint")
   );
 
-  const list = document.createElement("div");
+  const list = createHtmlElement("div");
   list.className = "card-block-list";
 
   page.forEach((layout, blockIndex) => {
-    const item = document.createElement("div");
+    const item = createHtmlElement("div");
     item.className = "card-block-item";
 
-    const description = document.createElement("div");
+    const description = createHtmlElement("div");
     description.className = "card-block-description";
     const blockSummary = summarizeCardLayout(layout);
     description.append(
@@ -567,7 +567,7 @@ function createBlockEditor(
       )
     );
 
-    const actions = document.createElement("div");
+    const actions = createHtmlElement("div");
     actions.className = "card-block-actions";
     actions.append(
       createBlockAction("↑", blockIndex > 0, () => {
@@ -645,12 +645,22 @@ function createBlockAction(
   return button;
 }
 
+function createHtmlElement<K extends keyof HTMLElementTagNameMap>(
+  tagName: K
+): HTMLElementTagNameMap[K];
+function createHtmlElement(tagName: string): HTMLElement {
+  return document.createElementNS(
+    "http://www.w3.org/1999/xhtml",
+    tagName
+  );
+}
+
 function createElement<K extends keyof HTMLElementTagNameMap>(
   tagName: K,
   text: string,
   className: string
 ): HTMLElementTagNameMap[K] {
-  const element = document.createElement(tagName);
+  const element = createHtmlElement(tagName);
   element.className = className;
   element.textContent = text;
   return element;
@@ -661,7 +671,7 @@ function createPageAction(
   enabled: boolean,
   action: () => void
 ): HTMLButtonElement {
-  const button = document.createElement("button");
+  const button = createHtmlElement("button");
   button.type = "button";
   button.className = "card-download";
   button.textContent = label;
@@ -883,7 +893,7 @@ async function saveCanvas(
 
 function saveBlob(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
+  const link = createHtmlElement("a");
   link.href = url;
   link.download = filename;
   link.click();
@@ -954,7 +964,7 @@ function hideWarning(): void {
 }
 
 function createEmptyState(message: string): HTMLElement {
-  const element = document.createElement("div");
+  const element = createHtmlElement("div");
   element.className = "empty-state";
   element.textContent = message;
   return element;
@@ -1148,13 +1158,13 @@ function clampInteger(
 
 function populateBrandSelect(selectedId = ""): void {
   brandSelect.replaceChildren();
-  const empty = document.createElement("option");
+  const empty = createHtmlElement("option");
   empty.value = "";
   empty.textContent = "不使用预设";
   brandSelect.append(empty);
 
   for (const preset of previewBrandPresets) {
-    const option = document.createElement("option");
+    const option = createHtmlElement("option");
     option.value = preset.id;
     option.textContent = preset.name;
     brandSelect.append(option);

@@ -1,6 +1,5 @@
 import {
   Modal,
-  Notice,
   type App
 } from "obsidian";
 import {
