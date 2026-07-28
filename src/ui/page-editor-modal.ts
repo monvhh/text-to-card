@@ -10,6 +10,7 @@ import {
 import { summarizeCardLayout } from "../utils/layout-summary";
 
 const SHOW_ADVANCED_BLOCK_EDITOR = false;
+const SHOW_RESET_PAGINATION = false;
 
 export class PageEditorModal extends Modal {
   private readonly originalPages: unknown[][];
@@ -66,13 +67,15 @@ export class PageEditorModal extends Modal {
     const toolbarActions = toolbar.createDiv({
       cls: "xhs-page-editor-toolbar-actions"
     });
-    const resetButton = toolbarActions.createEl("button", {
-      text: "恢复智能分页"
-    });
-    resetButton.addEventListener("click", () => {
-      this.session.pages = clonePages(this.originalPages);
-      void this.render();
-    });
+    if (SHOW_RESET_PAGINATION) {
+      const resetButton = toolbarActions.createEl("button", {
+        text: "恢复智能分页"
+      });
+      resetButton.addEventListener("click", () => {
+        this.session.pages = clonePages(this.originalPages);
+        void this.render();
+      });
+    }
 
     const cancelButton = toolbarActions.createEl("button", {
       text: "取消"
