@@ -93,11 +93,11 @@ assert.equal(
 assert.equal(module.DEFAULT_SETTINGS.bgColor, "#ffffff");
 assert.equal(module.DEFAULT_SETTINGS.textColor, "#1a1a1a");
 assert.equal(module.DEFAULT_SETTINGS.accentColor, "#8c3a3a");
-assert.equal(module.DEFAULT_SETTINGS.fontSize, 14);
+assert.equal(module.DEFAULT_SETTINGS.fontSize, 18);
 const minimalistConfig = module.getTemplate(
   "minimalist-magazine"
 ).config;
-assert.equal(minimalistConfig.fontSize, 14);
+assert.equal(minimalistConfig.fontSize, 18);
 assert.equal(minimalistConfig.accentColor, "#8C3A3A");
 assert.equal(minimalistConfig.h1Scale, 2);
 assert.equal(minimalistConfig.h2Scale, 1.35);

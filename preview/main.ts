@@ -976,7 +976,11 @@ function loadPreviewSettings(): PreviewSettings | null {
 
     return {
       templateId: value.templateId,
-      fontSize: readFiniteNumber(value.fontSize, 17),
+      fontSize:
+        value.templateId === "minimalist-magazine" &&
+        readFiniteNumber(value.fontSize, 18) === 14
+          ? 18
+          : readFiniteNumber(value.fontSize, 18),
       lineHeight: readFiniteNumber(value.lineHeight, 1.8),
       letterSpacing: readFiniteNumber(
         value.letterSpacing,

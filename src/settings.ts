@@ -70,7 +70,7 @@ export const DEFAULT_SETTINGS: XhsTextCardSettings = {
   coverImagePath: "",
   signatureText: "",
   stripFrontmatter: true,
-  fontSize: 14,
+  fontSize: 18,
   lineHeight: 1.7,
   letterSpacing: 0.3,
   textPadding: 45,
