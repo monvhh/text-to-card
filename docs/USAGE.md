@@ -4,7 +4,7 @@
 
 ### 使用发布包
 
-1. 解压 `release/xhs-text-card-1.0.0.zip`
+1. 解压最新的 `release/xhs-text-card-x.y.z.zip`
 2. 将其中的 `xhs-text-card` 文件夹复制到：
 
    ```text

@@ -48,8 +48,8 @@ npm run preview
 ## 安装包检查
 
 ```bash
-unzip -t release/xhs-text-card-1.0.0.zip
-unzip -l release/xhs-text-card-1.0.0.zip
+unzip -t release/xhs-text-card-x.y.z.zip
+unzip -l release/xhs-text-card-x.y.z.zip
 ```
 
 压缩包只应包含：
