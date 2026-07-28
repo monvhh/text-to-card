@@ -9,6 +9,7 @@ import {
 import type { ExportFormat } from "../src/settings";
 import { processPaginationDirectives } from "../src/utils/pagination-directives";
 import { normalizeMarkdownFeatures } from "../src/utils/markdown-features";
+import { summarizeCardLayout } from "../src/utils/layout-summary";
 
 const SAMPLE_MARKDOWN = `# 把 Obsidian 笔记变成小红书图卡
 
@@ -148,6 +149,7 @@ let activeTemplateId: TemplateId = "starry-night";
 let renderVersion = 0;
 let currentPages: unknown[][] = [];
 let currentConfig: Record<string, unknown> = {};
+const expandedPageIndexes = new Set<number>();
 let currentRenderer =
   new globalThis.XHS_TEXT_CARD_CORE.CanvasRenderer();
 let renderTimer: number | undefined;
@@ -397,7 +399,12 @@ async function renderPreview(): Promise<void> {
           scale: PREVIEW_SCALE
         });
 
-        return createCardNode(canvas, index, pages.length);
+        return createCardNode(
+          canvas,
+          index,
+          pages.length,
+          layouts
+        );
       })
     );
 
@@ -443,7 +450,8 @@ async function renderPreview(): Promise<void> {
 function createCardNode(
   canvas: HTMLCanvasElement,
   index: number,
-  totalCount: number
+  totalCount: number,
+  layouts: unknown[]
 ): HTMLElement {
   const article = document.createElement("article");
   article.className = "card-item";
@@ -501,8 +509,146 @@ function createCardNode(
 
   canvas.className = "preview-canvas";
   header.append(label, actions);
-  article.append(header, canvas);
+  article.append(
+    header,
+    canvas,
+    createBlockEditor(index, layouts)
+  );
   return article;
+}
+
+function createBlockEditor(
+  pageIndex: number,
+  page: unknown[]
+): HTMLElement {
+  const details = document.createElement("details");
+  details.className = "card-block-editor";
+  details.open = expandedPageIndexes.has(pageIndex);
+  details.addEventListener("toggle", () => {
+    if (details.open) {
+      expandedPageIndexes.add(pageIndex);
+    } else {
+      expandedPageIndexes.delete(pageIndex);
+    }
+  });
+
+  const summary = document.createElement("summary");
+  summary.className = "card-block-summary";
+  summary.append(
+    document.createTextNode(`调整内容（${page.length} 块）`),
+    createElement("span", "高级", "card-block-hint")
+  );
+
+  const list = document.createElement("div");
+  list.className = "card-block-list";
+
+  page.forEach((layout, blockIndex) => {
+    const item = document.createElement("div");
+    item.className = "card-block-item";
+
+    const description = document.createElement("div");
+    description.className = "card-block-description";
+    const blockSummary = summarizeCardLayout(layout);
+    description.append(
+      createElement(
+        "span",
+        blockSummary.label,
+        "card-block-type"
+      ),
+      createElement(
+        "span",
+        blockSummary.text,
+        "card-block-text"
+      )
+    );
+
+    const actions = document.createElement("div");
+    actions.className = "card-block-actions";
+    actions.append(
+      createBlockAction("↑", blockIndex > 0, () => {
+        swapItems(page, blockIndex, blockIndex - 1);
+      }, "在本张卡片中上移"),
+      createBlockAction(
+        "↓",
+        blockIndex < page.length - 1,
+        () => {
+          swapItems(page, blockIndex, blockIndex + 1);
+        },
+        "在本张卡片中下移"
+      ),
+      createBlockAction("上一张", pageIndex > 0, () => {
+        const [moved] = page.splice(blockIndex, 1);
+        currentPages[pageIndex - 1]?.push(moved);
+        removeEmptyPage(pageIndex);
+      }),
+      createBlockAction(
+        "下一张",
+        pageIndex < currentPages.length - 1,
+        () => {
+          const [moved] = page.splice(blockIndex, 1);
+          currentPages[pageIndex + 1]?.unshift(moved);
+          removeEmptyPage(pageIndex);
+        }
+      ),
+      createBlockAction(
+        "从这里分页",
+        blockIndex > 0,
+        () => {
+          const nextPage = page.splice(blockIndex);
+          currentPages.splice(pageIndex + 1, 0, nextPage);
+        }
+      ),
+      createBlockAction(
+        "不导出",
+        page.length > 1 || currentPages.length > 1,
+        () => {
+          page.splice(blockIndex, 1);
+          removeEmptyPage(pageIndex);
+        }
+      )
+    );
+
+    item.append(description, actions);
+    list.append(item);
+  });
+
+  details.append(summary, list);
+  return details;
+}
+
+function createBlockAction(
+  label: string,
+  enabled: boolean,
+  action: () => void,
+  tooltip?: string
+): HTMLButtonElement {
+  const button = createElement(
+    "button",
+    label,
+    "card-download"
+  );
+  button.type = "button";
+  button.disabled = !enabled;
+  if (tooltip) {
+    button.title = tooltip;
+    button.setAttribute("aria-label", tooltip);
+  }
+  button.addEventListener("click", () => {
+    action();
+    void renderEditedPages();
+  });
+  return button;
+}
+
+function createElement<K extends keyof HTMLElementTagNameMap>(
+  tagName: K,
+  text: string,
+  className: string
+): HTMLElementTagNameMap[K] {
+  const element = document.createElement(tagName);
+  element.className = className;
+  element.textContent = text;
+  return element;
 }
 
 function createPageAction(
@@ -532,6 +678,27 @@ function swapPages(a: number, b: number): void {
   void renderEditedPages();
 }
 
+function swapItems<T>(items: T[], a: number, b: number): void {
+  const first = items[a];
+  const second = items[b];
+
+  if (first === undefined || second === undefined) {
+    return;
+  }
+
+  items[a] = second;
+  items[b] = first;
+}
+
+function removeEmptyPage(pageIndex: number): void {
+  if (
+    currentPages[pageIndex]?.length === 0 &&
+    currentPages.length > 1
+  ) {
+    currentPages.splice(pageIndex, 1);
+  }
+}
+
 async function renderEditedPages(): Promise<void> {
   const version = ++renderVersion;
   setRenderingState(true);
@@ -554,7 +721,8 @@ async function renderEditedPages(): Promise<void> {
         return createCardNode(
           canvas,
           index,
-          currentPages.length
+          currentPages.length,
+          layouts
         );
       })
     );

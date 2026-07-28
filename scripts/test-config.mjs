@@ -3,7 +3,8 @@ import { build } from "esbuild";
 
 const module = await bundleModules([
   "src/utils/batch.ts",
-  "src/utils/custom-templates.ts"
+  "src/utils/custom-templates.ts",
+  "src/utils/layout-summary.ts"
 ]);
 
 assert.equal(module.isPathInFolder("Posts/a.md", "Posts"), true);
@@ -53,6 +54,36 @@ const merged = module.mergeCustomTemplates(
 );
 assert.equal(merged.length, 1);
 assert.equal(merged[0].name, "测试模板");
+
+assert.deepEqual(
+  module.summarizeCardLayout({
+    type: "heading",
+    lines: [
+      [
+        { text: "一个" },
+        { text: "标题" }
+      ]
+    ]
+  }),
+  {
+    label: "标题",
+    text: "一个标题"
+  }
+);
+assert.deepEqual(
+  module.summarizeCardLayout({ type: "space" }),
+  {
+    label: "留白",
+    text: "保留原文中的段落间距"
+  }
+);
+assert.equal(
+  module.summarizeCardLayout({
+    type: "list-item",
+    text: "这是一段很长的内容".repeat(10)
+  }).text.endsWith("…"),
+  true
+);
 
 console.log("Batch and template config tests passed");
 

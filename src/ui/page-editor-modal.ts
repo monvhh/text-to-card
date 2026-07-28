@@ -7,11 +7,11 @@ import {
   CardGenerator,
   type CardGenerationSession
 } from "../services/card-generator";
-
-type Layout = Record<string, unknown>;
+import { summarizeCardLayout } from "../utils/layout-summary";
 
 export class PageEditorModal extends Modal {
   private readonly originalPages: unknown[][];
+  private readonly expandedPages = new Set<number>();
   private renderVersion = 0;
   private finished = false;
 
@@ -202,41 +202,71 @@ export class PageEditorModal extends Modal {
     pageIndex: number
   ): void {
     const page = this.session.pages[pageIndex] ?? [];
-    const list = card.createDiv({
+    const list = card.createEl("details", {
       cls: "xhs-page-editor-blocks"
     });
-    list.createDiv({
+    list.open = this.expandedPages.has(pageIndex);
+    list.addEventListener("toggle", () => {
+      if (list.open) {
+        this.expandedPages.add(pageIndex);
+      } else {
+        this.expandedPages.delete(pageIndex);
+      }
+    });
+
+    const summary = list.createEl("summary", {
       cls: "xhs-page-editor-block-title",
-      text: `内容块 ${page.length}`
+      text: `调整内容（${page.length} 块）`
+    });
+    summary.createSpan({
+      cls: "xhs-page-editor-block-hint",
+      text: "高级"
+    });
+    const body = list.createDiv({
+      cls: "xhs-page-editor-block-list"
     });
 
     page.forEach((rawLayout, blockIndex) => {
-      const layout = asLayout(rawLayout);
-      const row = list.createDiv({
+      const blockSummary = summarizeCardLayout(rawLayout);
+      const row = body.createDiv({
         cls: "xhs-page-editor-block"
       });
-      row.createSpan({
+      const description = row.createDiv({
+        cls: "xhs-page-editor-block-description"
+      });
+      description.createSpan({
+        cls: "xhs-page-editor-block-type",
+        text: blockSummary.label
+      });
+      description.createSpan({
         cls: "xhs-page-editor-block-text",
-        text: summarizeLayout(layout, blockIndex)
+        text: blockSummary.text
       });
       const actions = row.createDiv({
         cls: "xhs-page-editor-block-actions"
       });
 
-      this.addAction(actions, "↑", blockIndex > 0, () => {
-        swap(page, blockIndex, blockIndex - 1);
-      });
+      this.addAction(
+        actions,
+        "↑",
+        blockIndex > 0,
+        () => {
+          swap(page, blockIndex, blockIndex - 1);
+        },
+        "在本张卡片中上移"
+      );
       this.addAction(
         actions,
         "↓",
         blockIndex < page.length - 1,
         () => {
           swap(page, blockIndex, blockIndex + 1);
-        }
+        },
+        "在本张卡片中下移"
       );
       this.addAction(
         actions,
-        "前页",
+        "上一张",
         pageIndex > 0,
         () => {
           const [moved] = page.splice(blockIndex, 1);
@@ -246,7 +276,7 @@ export class PageEditorModal extends Modal {
       );
       this.addAction(
         actions,
-        "后页",
+        "下一张",
         pageIndex < this.session.pages.length - 1,
         () => {
           const [moved] = page.splice(blockIndex, 1);
@@ -256,7 +286,7 @@ export class PageEditorModal extends Modal {
       );
       this.addAction(
         actions,
-        "从此拆分",
+        "从这里分页",
         blockIndex > 0,
         () => {
           const nextPage = page.splice(blockIndex);
@@ -269,7 +299,7 @@ export class PageEditorModal extends Modal {
       );
       this.addAction(
         actions,
-        "隐藏",
+        "不导出",
         page.length > 1 || this.session.pages.length > 1,
         () => {
           page.splice(blockIndex, 1);
@@ -283,11 +313,16 @@ export class PageEditorModal extends Modal {
     parent: HTMLElement,
     label: string,
     enabled: boolean,
-    action: () => void
+    action: () => void,
+    tooltip?: string
   ): void {
     const button = parent.createEl("button", {
       text: label
     });
+    if (tooltip) {
+      button.setAttribute("aria-label", tooltip);
+      button.setAttribute("title", tooltip);
+    }
     button.disabled = !enabled;
     button.addEventListener("click", () => {
       action();
@@ -319,42 +354,4 @@ function swap<T>(items: T[], a: number, b: number): void {
 
   items[a] = other;
   items[b] = value;
-}
-
-function asLayout(value: unknown): Layout {
-  return value && typeof value === "object"
-    ? (value as Layout)
-    : {};
-}
-
-function summarizeLayout(
-  layout: Layout,
-  index: number
-): string {
-  if (layout.type === "cover") {
-    return `封面：${String(layout.title ?? "")}`;
-  }
-
-  const candidates = [
-    layout.text,
-    layout.title,
-    Array.isArray(layout.lines)
-      ? layout.lines
-          .map((line) =>
-            typeof line === "string"
-              ? line
-              : String(
-                  (line as Record<string, unknown>)?.text ?? ""
-                )
-          )
-          .join(" ")
-      : ""
-  ];
-  const text = candidates
-    .find((candidate) => typeof candidate === "string")
-    ?.trim();
-
-  return text
-    ? text.slice(0, 48)
-    : `${String(layout.type ?? "内容")} ${index + 1}`;
 }

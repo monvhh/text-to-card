@@ -449,6 +449,86 @@ input[type="range"] {
   background: #fff;
 }
 
+.card-block-editor {
+  margin-top: 10px;
+  padding: 0 8px;
+  background: #fff;
+  border: 1px solid #deddd7;
+  border-radius: 4px;
+}
+
+.card-block-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 2px;
+  cursor: pointer;
+  color: #74736d;
+  font-size: 12px;
+  font-weight: 700;
+  list-style-position: inside;
+}
+
+.card-block-hint {
+  padding: 2px 6px;
+  color: #8d8c85;
+  background: #efeee9;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.card-block-list {
+  display: grid;
+  gap: 7px;
+  padding-bottom: 8px;
+}
+
+.card-block-item {
+  display: grid;
+  gap: 7px;
+  padding: 8px;
+  background: #f4f3ee;
+  border-radius: 4px;
+}
+
+.card-block-description {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 7px;
+}
+
+.card-block-type {
+  flex: 0 0 auto;
+  padding: 2px 6px;
+  color: #b42d1d;
+  background: #fde9e5;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.card-block-text {
+  min-width: 0;
+  overflow: hidden;
+  color: #74736d;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.card-block-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.card-block-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+
 .error-message {
   margin-bottom: 20px;
   padding: 13px 15px;
