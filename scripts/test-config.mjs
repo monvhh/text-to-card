@@ -4,7 +4,8 @@ import { build } from "esbuild";
 const module = await bundleModules([
   "src/utils/batch.ts",
   "src/utils/custom-templates.ts",
-  "src/utils/layout-summary.ts"
+  "src/utils/layout-summary.ts",
+  "src/settings.ts"
 ]);
 
 assert.equal(module.isPathInFolder("Posts/a.md", "Posts"), true);
@@ -84,6 +85,12 @@ assert.equal(
   }).text.endsWith("…"),
   true
 );
+assert.equal(
+  module.DEFAULT_SETTINGS.templateId,
+  "minimalist-magazine"
+);
+assert.equal(module.DEFAULT_SETTINGS.bgColor, "#ffffff");
+assert.equal(module.DEFAULT_SETTINGS.textColor, "#1a1a1a");
 
 console.log("Batch and template config tests passed");
 

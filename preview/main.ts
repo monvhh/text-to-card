@@ -146,7 +146,7 @@ const resetSampleButton =
 const resetStyleButton =
   getElement<HTMLButtonElement>("reset-style");
 
-let activeTemplateId: TemplateId = "starry-night";
+let activeTemplateId: TemplateId = "minimalist-magazine";
 let renderVersion = 0;
 let currentPages: unknown[][] = [];
 let currentConfig: Record<string, unknown> = {};
