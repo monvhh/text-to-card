@@ -2,7 +2,7 @@
 
 ## 产品定位
 
-XHS Text Card for Obsidian 是一款本地运行的内容生产插件，将 Markdown 笔记、
+Text to Card for Obsidian 是一款本地运行的内容生产插件，将 Markdown 笔记、
 选区或文件夹批量转换为适合小红书发布的 3:4 图片卡片。
 
 ## v1.0 完整功能

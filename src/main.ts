@@ -485,7 +485,7 @@ export default class XhsTextCardPlugin extends Plugin {
       ).open();
     } catch (error) {
       console.error(
-        "[XHS Text Card] Preview preparation failed",
+        "[Text to Card] Preview preparation failed",
         error
       );
       notice.hide();
@@ -549,7 +549,7 @@ export default class XhsTextCardPlugin extends Plugin {
           completedActions.push("首图已复制");
         } catch (error) {
           console.warn(
-            "[XHS Text Card] Copy image failed",
+            "[Text to Card] Copy image failed",
             error
           );
           new Notice(
@@ -579,7 +579,7 @@ export default class XhsTextCardPlugin extends Plugin {
           );
         } catch (error) {
           console.warn(
-            "[XHS Text Card] Reveal output failed",
+            "[Text to Card] Reveal output failed",
             error
           );
         }
@@ -596,7 +596,7 @@ export default class XhsTextCardPlugin extends Plugin {
         8000
       );
     } catch (error) {
-      console.error("[XHS Text Card] Generation failed", error);
+      console.error("[Text to Card] Generation failed", error);
       notice.hide();
       new Notice(
         `生成失败：${

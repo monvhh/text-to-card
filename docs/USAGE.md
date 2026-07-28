@@ -13,7 +13,7 @@
 
 3. 重启 Obsidian，或执行“重新加载应用而不保存”
 4. 打开 **设置 → 第三方插件**
-5. 启用 **XHS Text Card**
+5. 启用 **Text to Card**
 
 ### 从源码构建
 
@@ -149,7 +149,7 @@ PingFang SC, sans-serif
 
 ### 自定义模板
 
-在 **设置 → XHS Text Card → 自定义模板** 中可以：
+在 **设置 → Text to Card → 自定义模板** 中可以：
 
 - 从当前默认样式创建模板
 - 复制已有自定义模板
@@ -274,7 +274,7 @@ obsidian://xhs-text-card?folder=Posts&templates=blank,starry-night&tag=xhs&updat
 
 ## 12. 设置与迁移
 
-所有默认参数都在 **设置 → XHS Text Card**。从旧版本升级时，插件会合并新字段
+所有默认参数都在 **设置 → Text to Card**。从旧版本升级时，插件会合并新字段
 的默认值；原有输出目录、格式、样式和生成后动作会保留。自定义模板和品牌预设
 存储在插件配置中。
 

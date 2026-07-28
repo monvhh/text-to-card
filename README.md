@@ -1,4 +1,4 @@
-# XHS Text Card for Obsidian
+# Text to Card for Obsidian
 
 把 Obsidian 笔记或选中的 Markdown 内容转换为 3:4 小红书图文卡片。所有内容
 在本地 Canvas 中完成分页和渲染，不上传笔记。
@@ -24,7 +24,7 @@
 ### Community Plugins
 
 审核上架后，可在 Obsidian 的 **设置 → 第三方插件 → 浏览** 中搜索
-**XHS Text Card** 并安装。
+**Text to Card** 并安装。
 
 ### 手动安装
 
@@ -32,7 +32,7 @@
    下载 `main.js`、`manifest.json` 和 `styles.css`
 2. 在 Vault 的 `.obsidian/plugins/` 中创建 `xhs-text-card` 文件夹
 3. 将三个文件放入该文件夹，重启或重新加载 Obsidian
-4. 在 **设置 → 第三方插件** 中启用 **XHS Text Card**
+4. 在 **设置 → 第三方插件** 中启用 **Text to Card**
 
 ## 开发预览
 

@@ -20,7 +20,7 @@ const engineSource = engineFiles
   .join("\n\n");
 
 const banner = `/*
-XHS Text Card for Obsidian
+Text to Card for Obsidian
 The card rendering engine is adapted from geekfoxcharlie/XHS-TextCard (MIT).
 */
 ${markedSource}
