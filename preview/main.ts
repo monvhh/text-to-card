@@ -50,6 +50,7 @@ const PREVIEW_HEIGHT = 667;
 const PREVIEW_SCALE = 1.4;
 const EXPORT_SCALE = 1242 / PREVIEW_WIDTH;
 const STORAGE_KEY = "xhs-text-card-preview-settings-v1";
+const DEFAULT_LOGO_URL = "/logo.png";
 const SHOW_ADVANCED_BLOCK_EDITOR = false;
 
 interface PreviewSettings {
@@ -187,7 +188,7 @@ function initialize(): void {
     exportFormatSelect.value = "png";
     maxPagesInput.value = "0";
     fontFamilyInput.value = "inherit";
-    logoUrlInput.value = "";
+    logoUrlInput.value = DEFAULT_LOGO_URL;
     coverImageUrlInput.value = "";
   }
 
@@ -362,6 +363,9 @@ async function renderPreview(): Promise<void> {
       accentColor: accentColorInput.value,
       fontFamily: fontFamilyInput.value.trim() || "inherit",
       logoImage: logoUrlInput.value.trim(),
+      logoPosition: "left",
+      logoSize: 30,
+      logoPadding: 24,
       hasCover: includeCoverInput.checked,
       coverImage:
         coverImageUrlInput.value.trim() ||
@@ -1013,7 +1017,10 @@ function loadPreviewSettings(): PreviewSettings | null {
           ? value.fontFamily
           : "inherit",
       logoUrl:
-        typeof value.logoUrl === "string" ? value.logoUrl : "",
+        typeof value.logoUrl === "string" &&
+        value.logoUrl.trim()
+          ? value.logoUrl
+          : DEFAULT_LOGO_URL,
       brandPresets: Array.isArray(value.brandPresets)
         ? value.brandPresets.filter(isPreviewBrandPreset)
         : []
