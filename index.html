@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0"
+    />
+    <meta
+      name="description"
+      content="XHS Text Card for Obsidian 本地开发预览器"
+    />
+    <title>XHS Text Card · 开发预览</title>
+  </head>
+  <body>
+    <div class="preview-app">
+      <header class="app-header">
+        <div>
+          <p class="eyebrow">OBSIDIAN PLUGIN PLAYGROUND</p>
+          <h1>XHS Text Card</h1>
+          <p class="subtitle">
+            不打开 Obsidian，也能实时测试 Markdown、分页和模板效果
+          </p>
+        </div>
+        <div class="header-actions">
+          <span class="privacy-badge">本地渲染 · 不上传内容</span>
+          <button id="download-all" class="primary-button" type="button">
+            下载 ZIP
+          </button>
+        </div>
+      </header>
+
+      <main class="workspace">
+        <aside class="editor-panel">
+          <section class="panel-section">
+            <div class="section-heading">
+              <div>
+                <span class="section-number">01</span>
+                <h2>内容</h2>
+              </div>
+              <button id="reset-sample" class="text-button" type="button">
+                恢复示例
+              </button>
+            </div>
+            <textarea
+              id="markdown-input"
+              spellcheck="false"
+              aria-label="Markdown 内容"
+            ></textarea>
+          </section>
+
+          <section class="panel-section settings-section">
+            <div class="section-heading">
+              <div>
+                <span class="section-number">02</span>
+                <h2>样式</h2>
+              </div>
+              <button id="reset-style" class="text-button" type="button">
+                重置模板
+              </button>
+            </div>
+
+            <label class="field">
+              <span>模板</span>
+              <select id="template-select"></select>
+            </label>
+
+            <div class="field-row">
+              <label class="field">
+                <span>字号 <output id="font-size-output"></output></span>
+                <input
+                  id="font-size"
+                  type="range"
+                  min="13"
+                  max="24"
+                  step="1"
+                />
+              </label>
+              <label class="field">
+                <span>行高 <output id="line-height-output"></output></span>
+                <input
+                  id="line-height"
+                  type="range"
+                  min="1.2"
+                  max="2.4"
+                  step="0.1"
+                />
+              </label>
+            </div>
+
+            <div class="field-row">
+              <label class="field">
+                <span>
+                  字间距
+                  <output id="letter-spacing-output"></output>
+                </span>
+                <input
+                  id="letter-spacing"
+                  type="range"
+                  min="0"
+                  max="2"
+                  step="0.1"
+                />
+              </label>
+              <label class="field">
+                <span>
+                  内容边距
+                  <output id="text-padding-output"></output>
+                </span>
+                <input
+                  id="text-padding"
+                  type="range"
+                  min="24"
+                  max="72"
+                  step="1"
+                />
+              </label>
+            </div>
+
+            <div class="color-grid">
+              <label class="color-field">
+                <span>背景色</span>
+                <input id="bg-color" type="color" />
+              </label>
+              <label class="color-field">
+                <span>文字色</span>
+                <input id="text-color" type="color" />
+              </label>
+              <label class="color-field">
+                <span>强调色</span>
+                <input id="accent-color" type="color" />
+              </label>
+            </div>
+
+            <label class="field">
+              <span>字体</span>
+              <input
+                id="font-family"
+                type="text"
+                placeholder="inherit 或 PingFang SC"
+              />
+            </label>
+
+            <label class="field">
+              <span>Logo URL / Data URL</span>
+              <input
+                id="logo-url"
+                type="text"
+                placeholder="留空则不显示 Logo"
+              />
+            </label>
+
+            <div class="brand-editor">
+              <label class="field">
+                <span>品牌预设</span>
+                <select id="brand-select">
+                  <option value="">不使用预设</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>新预设名称</span>
+                <input
+                  id="brand-name"
+                  type="text"
+                  placeholder="例如：知识花园"
+                />
+              </label>
+              <button id="save-brand" type="button">保存当前品牌</button>
+              <button id="delete-brand" type="button">
+                删除所选品牌
+              </button>
+            </div>
+
+            <label class="toggle-field">
+              <input id="include-cover" type="checkbox" />
+              <span class="toggle"></span>
+              <span>生成封面</span>
+            </label>
+
+            <label class="field">
+              <span>自定义封面 URL / Data URL</span>
+              <input
+                id="cover-image-url"
+                type="text"
+                placeholder="留空使用模板封面"
+              />
+            </label>
+
+            <label class="field">
+              <span>封面标题</span>
+              <input
+                id="cover-title"
+                type="text"
+                placeholder="输入封面标题"
+              />
+            </label>
+
+            <label class="field">
+              <span>签名</span>
+              <input
+                id="signature"
+                type="text"
+                placeholder="@你的账号，留空则隐藏"
+              />
+            </label>
+
+            <label class="field">
+              <span>水印文字</span>
+              <input
+                id="watermark"
+                type="text"
+                placeholder="请勿搬运，留空则隐藏"
+              />
+            </label>
+
+            <label class="toggle-field">
+              <input id="show-page-number" type="checkbox" />
+              <span class="toggle"></span>
+              <span>显示页码</span>
+            </label>
+
+            <label class="field">
+              <span>最大页数（0 表示不限）</span>
+              <input
+                id="max-pages"
+                type="number"
+                min="0"
+                max="50"
+                step="1"
+                value="0"
+              />
+            </label>
+
+            <label class="field">
+              <span>下载格式</span>
+              <select id="export-format">
+                <option value="png">PNG · 无损</option>
+                <option value="jpeg">JPEG · 较小文件</option>
+              </select>
+            </label>
+          </section>
+        </aside>
+
+        <section class="preview-panel">
+          <div class="preview-toolbar">
+            <div>
+              <p class="eyebrow">LIVE CANVAS</p>
+              <h2>卡片预览</h2>
+            </div>
+            <div class="status-group">
+              <span id="render-status" class="render-status">准备渲染</span>
+              <span id="page-count" class="page-count">0 张</span>
+            </div>
+          </div>
+
+          <div id="error-message" class="error-message" hidden></div>
+          <div
+            id="warning-message"
+            class="warning-message"
+            hidden
+          ></div>
+          <div id="cards" class="cards-grid" aria-live="polite"></div>
+        </section>
+      </main>
+    </div>
+
+    <script src="/xhs-core.js"></script>
+    <script type="module" src="/preview/main.ts"></script>
+  </body>
+</html>

@@ -1,0 +1,45 @@
+{
+  "name": "obsidian-xhs-text-card",
+  "version": "1.0.0",
+  "description": "Generate Xiaohongshu-style image cards from Obsidian notes.",
+  "main": "main.js",
+  "type": "module",
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "build": "tsc --noEmit --skipLibCheck && node esbuild.config.mjs production",
+    "build:preview-core": "node scripts/build-preview-core.mjs",
+    "preview": "npm run build:preview-core && vite --host 127.0.0.1 --port 5173 --strictPort",
+    "preview:build": "npm run build:preview-core && vite build",
+    "test:pagination": "node scripts/test-pagination.mjs",
+    "test:markdown": "node scripts/test-markdown.mjs",
+    "test:config": "node scripts/test-config.mjs",
+    "test": "npm run test:pagination && npm run test:markdown && npm run test:config",
+    "check:all": "npm test && npm run build && npm run preview:build"
+  },
+  "keywords": [
+    "obsidian",
+    "markdown",
+    "xiaohongshu",
+    "image"
+  ],
+  "license": "MIT",
+  "author": "monvhh",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/monvhh/text-to-card.git"
+  },
+  "bugs": {
+    "url": "https://github.com/monvhh/text-to-card/issues"
+  },
+  "homepage": "https://github.com/monvhh/text-to-card#readme",
+  "devDependencies": {
+    "@types/node": "^22.15.17",
+    "esbuild": "^0.25.5",
+    "obsidian": "latest",
+    "typescript": "^5.8.3",
+    "vite": "^7.0.0"
+  },
+  "dependencies": {
+    "jszip": "^3.10.1"
+  }
+}

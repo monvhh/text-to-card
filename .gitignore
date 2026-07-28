@@ -1,0 +1,7 @@
+node_modules/
+main.js
+*.map
+release/
+dist/
+public/xhs-core.js
+.DS_Store
