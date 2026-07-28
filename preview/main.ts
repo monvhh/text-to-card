@@ -352,6 +352,7 @@ async function renderPreview(): Promise<void> {
     await document.fonts?.ready;
     const template = getTemplate(activeTemplateId);
     const signatureText = signatureInput.value.trim();
+    const logoImage = logoUrlInput.value.trim();
     const config: Record<string, unknown> = {
       ...template.config,
       fontSize: Number(fontSizeInput.value),
@@ -362,9 +363,9 @@ async function renderPreview(): Promise<void> {
       textColor: textColorInput.value,
       accentColor: accentColorInput.value,
       fontFamily: fontFamilyInput.value.trim() || "inherit",
-      logoImage: logoUrlInput.value.trim(),
+      logoImage,
       logoPosition: "left",
-      logoSize: 42,
+      logoSize: 24,
       logoPadding: 24,
       hasCover: includeCoverInput.checked,
       coverImage:
@@ -372,8 +373,8 @@ async function renderPreview(): Promise<void> {
         template.config.coverImage,
       coverTitle:
         coverTitleInput.value.trim() || "未命名文档",
-      hasSignature: Boolean(signatureText),
-      signatureText,
+      hasSignature: Boolean(signatureText) && !logoImage,
+      signatureText: logoImage ? "" : signatureText,
       hasWatermark: Boolean(watermarkInput.value.trim()),
       watermarkText: watermarkInput.value.trim(),
       showPageNumber: showPageNumberInput.checked,
