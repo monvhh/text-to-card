@@ -32,9 +32,9 @@ export class XhsTextCardSettingTab extends PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
 
-    containerEl.createEl("h2", {
-      text: "默认生成设置"
-    });
+    new Setting(containerEl)
+      .setName("默认生成设置")
+      .setHeading();
 
     new Setting(containerEl)
       .setName("默认模板")
@@ -296,7 +296,9 @@ export class XhsTextCardSettingTab extends PluginSettingTab {
   }
 
   private renderBrandPresets(containerEl: HTMLElement): void {
-    containerEl.createEl("h2", { text: "品牌预设" });
+    new Setting(containerEl)
+      .setName("品牌预设")
+      .setHeading();
     let presetName = "";
 
     new Setting(containerEl)
@@ -382,7 +384,9 @@ export class XhsTextCardSettingTab extends PluginSettingTab {
   private renderCustomTemplates(
     containerEl: HTMLElement
   ): void {
-    containerEl.createEl("h2", { text: "自定义模板" });
+    new Setting(containerEl)
+      .setName("自定义模板")
+      .setHeading();
     let templateName = "";
 
     new Setting(containerEl)
@@ -488,9 +492,9 @@ export class XhsTextCardSettingTab extends PluginSettingTab {
   }
 
   private renderFavorites(containerEl: HTMLElement): void {
-    containerEl.createEl("h2", {
-      text: "模板收藏与最近使用"
-    });
+    new Setting(containerEl)
+      .setName("模板收藏与最近使用")
+      .setHeading();
     let selected: TemplateId = this.plugin.settings.templateId;
 
     new Setting(containerEl)
