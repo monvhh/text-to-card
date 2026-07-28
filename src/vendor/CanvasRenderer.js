@@ -428,6 +428,39 @@ class CanvasRenderer {
             if (layout.type === 'heading') {
                 this.drawStyledLines(ctx, layout.lines, textAreaRect.x, contentY, config, templateId, textAreaRect.width, layout.align);
             } else if (layout.type === 'blockquote') {
+                if (layout.paddingY !== undefined && layout.contentOffset !== undefined) {
+                    const blockHeight = layout.height - (layout.marginTop || 0) - (layout.marginBottom || 0);
+                    const barWidth = layout.barWidth || 3;
+                    const paddingX = layout.paddingX || 12;
+                    const paddingY = layout.paddingY || 6;
+                    const contentOffset = layout.contentOffset || 24;
+                    const quoteBarColor = config.accentColor || 'rgba(0,0,0,0.1)';
+                    const quoteBgColor = CanvasUtils.hexToRgba(
+                        config.accentColor || config.textColor || '#000000',
+                        0.08
+                    );
+                    CanvasUtils.drawRoundedRect(ctx, textAreaRect.x, contentY, textAreaRect.width, blockHeight, 6, quoteBgColor);
+                    ctx.fillStyle = quoteBarColor;
+                    ctx.fillRect(
+                        textAreaRect.x + paddingX,
+                        contentY + paddingY,
+                        barWidth,
+                        Math.max(4, blockHeight - (paddingY * 2))
+                    );
+                    this.drawStyledLines(
+                        ctx,
+                        layout.lines,
+                        textAreaRect.x + contentOffset,
+                        contentY + paddingY,
+                        config,
+                        templateId,
+                        textAreaRect.width - contentOffset - paddingX,
+                        layout.align
+                    );
+                    currentY += layout.height;
+                    continue;
+                }
+
                 const indent = layout.indent || 20;
                 let quoteBarColor = config.accentColor || 'rgba(0,0,0,0.1)';
                 ctx.fillStyle = quoteBarColor;

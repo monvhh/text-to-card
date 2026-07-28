@@ -450,31 +450,28 @@ const TemplateDefinitions = {
     'minimalist-magazine': {
         getContentBox: (config, width, height) => {
             const padding = parseFloat(config.textPadding) || 45;
-            const topMargin = 100, bottomMargin = config.hasSignature ? 80 : 60;
+            const topMargin = 82, bottomMargin = config.hasSignature ? 80 : 60;
             return { x: padding, y: topMargin, width: width - (padding * 2), height: height - topMargin - bottomMargin };
         },
         drawTextAreaBackground: (ctx, rect, config) => {
             const textColor = config.textColor || '#1A1A1A';
             ctx.save();
             ctx.strokeStyle = CanvasUtils.hexToRgba(textColor, 0.1);
-            ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(rect.x, 85); ctx.lineTo(rect.x + rect.width, 85); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(rect.x, PREVIEW_HEIGHT - 55); ctx.lineTo(rect.x + rect.width, PREVIEW_HEIGHT - 55); ctx.stroke();
+            ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(rect.x, 66); ctx.lineTo(rect.x + rect.width, 66); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(rect.x, rect.y + rect.height + 5); ctx.lineTo(rect.x + rect.width, rect.y + rect.height + 5); ctx.stroke();
             ctx.restore();
         },
         drawForeground: (ctx, width, height, index, totalCount, config) => {
             const decorativeColor = '#1A1A1A';
             ctx.save();
             ctx.fillStyle = decorativeColor; ctx.font = 'bold 12px serif';
-            ctx.textAlign = 'left'; ctx.fillText('EDITORIAL', 45, 75);
-            ctx.fillStyle = CanvasUtils.hexToRgba(decorativeColor, 0.6); ctx.font = 'italic 10px serif';
-            ctx.textAlign = 'right'; ctx.fillText('COLLECTION // VOL. 2026', width - 45, 75);
             ctx.restore();
             TemplateDefinitions._drawPageNumber(ctx, width, height, index, totalCount, config, { x: width - 45, y: height - 35 });
         },
         getTextStyles: (segment, config) => {
             const accentColor = config.accentColor || '#1A1A1A';
             const textColor = config.textColor || '#1A1A1A';
-            if (segment.fontWeight === '700' || segment.fontWeight === '800' || segment.isHighlight || segment.headingLevel) {
+            if (segment.isHighlight || segment.headingLevel) {
                 return { textColor: accentColor, highlightColor: CanvasUtils.hexToRgba(accentColor, 0.15) };
             }
             return { textColor };

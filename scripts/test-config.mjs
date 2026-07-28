@@ -5,7 +5,8 @@ const module = await bundleModules([
   "src/utils/batch.ts",
   "src/utils/custom-templates.ts",
   "src/utils/layout-summary.ts",
-  "src/settings.ts"
+  "src/settings.ts",
+  "src/templates/index.ts"
 ]);
 
 assert.equal(module.isPathInFolder("Posts/a.md", "Posts"), true);
@@ -91,6 +92,17 @@ assert.equal(
 );
 assert.equal(module.DEFAULT_SETTINGS.bgColor, "#ffffff");
 assert.equal(module.DEFAULT_SETTINGS.textColor, "#1a1a1a");
+assert.equal(module.DEFAULT_SETTINGS.accentColor, "#8c3a3a");
+assert.equal(module.DEFAULT_SETTINGS.fontSize, 14);
+const minimalistConfig = module.getTemplate(
+  "minimalist-magazine"
+).config;
+assert.equal(minimalistConfig.fontSize, 14);
+assert.equal(minimalistConfig.accentColor, "#8C3A3A");
+assert.equal(minimalistConfig.h1Scale, 2);
+assert.equal(minimalistConfig.h2Scale, 1.35);
+assert.equal(minimalistConfig.h3Scale, 1.15);
+assert.equal(minimalistConfig.modernBlockquote, true);
 
 console.log("Batch and template config tests passed");
 

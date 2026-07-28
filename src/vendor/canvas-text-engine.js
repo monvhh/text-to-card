@@ -447,7 +447,9 @@ class CanvasTextEngine {
                     fontSize, fontWeight: '800', headingLevel: token.depth
                 });
 
-                const marginTop = fontSize * 0.6, marginBottom = fontSize * 0.4;
+                const compact = this.config.editorialSpacing === true;
+                const marginTop = fontSize * (compact ? 0.45 : 0.6);
+                const marginBottom = fontSize * (compact ? 0.25 : 0.4);
                 layouts.push({
                     type: 'heading', depth: token.depth, lines,
                     height: marginTop + (lines.length * fontSize * this.config.lineHeight) + marginBottom,
@@ -496,7 +498,9 @@ class CanvasTextEngine {
                 }
 
                 const lines = await this.layoutInlineText(token.tokens || [{ type: 'text', text: token.text || '' }]);
-                const marginBottom = this.config.fontSize * 0.8;
+                const marginBottom = this.config.fontSize * (
+                    this.config.editorialSpacing === true ? 0.55 : 0.8
+                );
                 layouts.push({
                     type: 'paragraph', lines, height: (lines.length * baseLineHeight) + marginBottom,
                     marginTop: 0, marginBottom
@@ -504,6 +508,26 @@ class CanvasTextEngine {
                 break;
             }
             case 'blockquote': {
+                if (this.config.modernBlockquote === true) {
+                    const barWidth = 3;
+                    const barGap = 9;
+                    const paddingX = 12;
+                    const paddingY = 6;
+                    const contentOffset = paddingX + barWidth + barGap;
+                    const lines = await this.layoutInlineText(
+                        token.tokens || [{ type: 'text', text: token.text }],
+                        this.drawWidth - contentOffset - paddingX,
+                        { fontStyle: 'italic', isBlockquote: true }
+                    );
+                    const marginBottom = this.config.fontSize * 0.55;
+                    layouts.push({
+                        type: 'blockquote', lines, barWidth, barGap, paddingX, paddingY, contentOffset,
+                        height: (lines.length * baseLineHeight) + (paddingY * 2) + marginBottom,
+                        marginTop: 0, marginBottom
+                    });
+                    break;
+                }
+
                 const indent = 20;
                 const lines = await this.layoutInlineText(token.tokens || [{ type: 'text', text: token.text }], this.drawWidth - indent);
                 const marginBottom = this.config.fontSize * 0.8;
@@ -533,7 +557,9 @@ class CanvasTextEngine {
                     }
 
                     const lines = await this.layoutInlineText(inlineTokens, this.drawWidth - prefixWidth);
-                    const marginBottom = this.config.fontSize * 0.8;
+                    const marginBottom = this.config.fontSize * (
+                        this.config.editorialSpacing === true ? 0.55 : 0.8
+                    );
                     layouts.push({
                         type: 'list-item', prefix, prefixWidth, lines,
                         height: (lines.length * baseLineHeight) + marginBottom,
