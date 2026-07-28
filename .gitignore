@@ -5,3 +5,4 @@ release/
 dist/
 public/xhs-core.js
 .DS_Store
+tmp/

@@ -139,17 +139,22 @@ class CanvasRenderer {
         if (!image) return;
 
         const size = Math.max(24, Math.min(64, Number(config.logoSize) || 36));
+        const sourceWidth = image.naturalWidth || image.width || size;
+        const sourceHeight = image.naturalHeight || image.height || size;
+        const aspectRatio = Math.max(0.5, Math.min(4, sourceWidth / sourceHeight));
+        const drawHeight = size;
+        const drawWidth = Math.min(width * 0.4, drawHeight * aspectRatio);
         const padding = Math.max(16, Number(config.logoPadding) || 24);
         const x = config.logoPosition === 'left'
             ? padding
-            : width - padding - size;
-        const y = height - padding - size;
+            : width - padding - drawWidth;
+        const y = height - padding - drawHeight;
 
         ctx.save();
         ctx.beginPath();
-        ctx.roundRect(x, y, size, size, Math.min(8, size / 4));
+        ctx.roundRect(x, y, drawWidth, drawHeight, Math.min(8, drawHeight / 4));
         ctx.clip();
-        ctx.drawImage(image, x, y, size, size);
+        ctx.drawImage(image, x, y, drawWidth, drawHeight);
         ctx.restore();
     }
 
