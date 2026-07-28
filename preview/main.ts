@@ -50,7 +50,7 @@ const PREVIEW_HEIGHT = 667;
 const PREVIEW_SCALE = 1.4;
 const EXPORT_SCALE = 1242 / PREVIEW_WIDTH;
 const STORAGE_KEY = "xhs-text-card-preview-settings-v1";
-const DEFAULT_LOGO_URL = "/shanjian-psychology-logo.png";
+const DEFAULT_LOGO_URL = "/logo.png";
 const SHOW_ADVANCED_BLOCK_EDITOR = false;
 
 interface PreviewSettings {
@@ -365,7 +365,7 @@ async function renderPreview(): Promise<void> {
       fontFamily: fontFamilyInput.value.trim() || "inherit",
       logoImage,
       logoPosition: "left",
-      logoSize: 24,
+      logoSize: 30,
       logoPadding: 24,
       hasCover: includeCoverInput.checked,
       coverImage:
@@ -373,8 +373,8 @@ async function renderPreview(): Promise<void> {
         template.config.coverImage,
       coverTitle:
         coverTitleInput.value.trim() || "未命名文档",
-      hasSignature: Boolean(signatureText) && !logoImage,
-      signatureText: logoImage ? "" : signatureText,
+      hasSignature: Boolean(signatureText),
+      signatureText,
       hasWatermark: Boolean(watermarkInput.value.trim()),
       watermarkText: watermarkInput.value.trim(),
       showPageNumber: showPageNumberInput.checked,
@@ -1020,7 +1020,7 @@ function loadPreviewSettings(): PreviewSettings | null {
       logoUrl:
         typeof value.logoUrl === "string" &&
         value.logoUrl.trim() &&
-        value.logoUrl !== "/logo.png" &&
+        value.logoUrl !== "/shanjian-psychology-logo.png" &&
         !value.logoUrl.startsWith(
           "https://counseling.anxinli.com/assets/favicon-black.png"
         )
