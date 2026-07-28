@@ -36,6 +36,7 @@ export interface XhsTextCardSettings {
   includeCover: boolean;
   coverImagePath: string;
   signatureText: string;
+  useFileNameAsTitle: boolean;
   stripFrontmatter: boolean;
   fontSize: number;
   lineHeight: number;
@@ -69,6 +70,7 @@ export const DEFAULT_SETTINGS: XhsTextCardSettings = {
   includeCover: true,
   coverImagePath: "",
   signatureText: "",
+  useFileNameAsTitle: true,
   stripFrontmatter: true,
   fontSize: 18,
   lineHeight: 1.7,

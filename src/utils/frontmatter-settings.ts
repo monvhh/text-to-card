@@ -62,6 +62,10 @@ export function applyFrontmatterSettings(
     readString(frontmatter["xhs-signature"], true)
   );
   assign(
+    "useFileNameAsTitle",
+    readBoolean(frontmatter["xhs-use-file-title"])
+  );
+  assign(
     "watermarkText",
     readString(frontmatter["xhs-watermark"], true)
   );

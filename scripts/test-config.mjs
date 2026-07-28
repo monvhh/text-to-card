@@ -4,6 +4,7 @@ import { build } from "esbuild";
 const module = await bundleModules([
   "src/utils/batch.ts",
   "src/utils/custom-templates.ts",
+  "src/utils/frontmatter-settings.ts",
   "src/utils/layout-summary.ts",
   "src/settings.ts",
   "src/templates/index.ts"
@@ -94,6 +95,13 @@ assert.equal(module.DEFAULT_SETTINGS.bgColor, "#ffffff");
 assert.equal(module.DEFAULT_SETTINGS.textColor, "#1a1a1a");
 assert.equal(module.DEFAULT_SETTINGS.accentColor, "#8c3a3a");
 assert.equal(module.DEFAULT_SETTINGS.fontSize, 18);
+assert.equal(module.DEFAULT_SETTINGS.useFileNameAsTitle, true);
+assert.equal(
+  module.applyFrontmatterSettings(module.DEFAULT_SETTINGS, {
+    "xhs-use-file-title": false
+  }).settings.useFileNameAsTitle,
+  false
+);
 const minimalistConfig = module.getTemplate(
   "minimalist-magazine"
 ).config;

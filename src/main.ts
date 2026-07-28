@@ -420,6 +420,7 @@ export default class XhsTextCardPlugin extends Plugin {
         includeCover: options.includeCover,
         coverImagePath: options.coverImagePath,
         signatureText: options.signatureText,
+        useFileNameAsTitle: options.useFileNameAsTitle,
         stripFrontmatter: options.stripFrontmatter,
         fontSize: options.fontSize,
         lineHeight: options.lineHeight,

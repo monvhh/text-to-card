@@ -278,6 +278,18 @@ export class XhsTextCardSettingTab extends PluginSettingTab {
           });
       });
 
+    new Setting(containerEl)
+      .setName("默认使用文件名作为文章标题")
+      .setDesc("生成时在正文最前添加一级标题，不修改原笔记")
+      .addToggle((toggle) => {
+        toggle
+          .setValue(this.plugin.settings.useFileNameAsTitle)
+          .onChange(async (value) => {
+            this.plugin.settings.useFileNameAsTitle = value;
+            await this.plugin.saveSettings();
+          });
+      });
+
     this.renderBrandPresets(containerEl);
     this.renderCustomTemplates(containerEl);
     this.renderFavorites(containerEl);

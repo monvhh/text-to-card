@@ -366,6 +366,17 @@ export class GenerateCardsModal extends Modal {
           });
       });
 
+    new Setting(this.contentEl)
+      .setName("使用文件名作为文章标题")
+      .setDesc("在正文最前添加一级标题，不修改原笔记")
+      .addToggle((toggle) => {
+        toggle
+          .setValue(this.values.useFileNameAsTitle)
+          .onChange((value) => {
+            this.values.useFileNameAsTitle = value;
+          });
+      });
+
     this.contentEl.createEl("h3", {
       text: "生成后操作",
       cls: "xhs-text-card-section-title"

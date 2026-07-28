@@ -61,7 +61,7 @@ Canvas 渲染结果。浏览器预览与插件共用模板、Markdown、分页�
 生成流程：
 
 1. 选择模板、品牌预设和图片格式
-2. 调整字号、间距、颜色、字体、Logo、封面和输出选项
+2. 调整字号、间距、颜色、字体、Logo、封面和输出选项；默认会把文件名作为正文一级标题
 3. 点击 **生成图片**，进入 Canvas 分页预览
 4. 检查并编辑页面
 5. 点击 **导出图片**
@@ -224,6 +224,7 @@ xhs-font-family: "PingFang SC, sans-serif"
 xhs-logo: assets/brand/logo.png
 xhs-cover-image: assets/covers/custom.jpg
 xhs-signature: "@alice"
+xhs-use-file-title: true
 xhs-watermark: true
 xhs-cover: true
 xhs-page-number: true

@@ -12,6 +12,7 @@ import {
   getTemplate,
   type TemplateId
 } from "../templates";
+import { addFileNameTitle } from "../utils/article-title";
 import { prepareMarkdown } from "../utils/markdown";
 
 export interface CardGenerationOptions {
@@ -23,6 +24,7 @@ export interface CardGenerationOptions {
   coverImagePath: string;
   coverTitle: string;
   signatureText: string;
+  useFileNameAsTitle: boolean;
   stripFrontmatter: boolean;
   fontSize: number;
   lineHeight: number;
@@ -92,6 +94,12 @@ export class CardGenerator {
       throw new Error("没有可生成的内容");
     }
 
+    const articleMarkdown = addFileNameTitle(
+      preparedMarkdown,
+      sourceFile.basename,
+      options.useFileNameAsTitle
+    );
+
     const template = getTemplate(options.templateId);
     const logoImage = this.resolveVaultImage(options.logoPath);
     const customCoverImage = this.resolveVaultImage(
@@ -127,7 +135,7 @@ export class CardGenerator {
       config,
       options.templateId
     );
-    const pages = await splitter.split(preparedMarkdown);
+    const pages = await splitter.split(articleMarkdown);
 
     if (pages.length === 0) {
       throw new Error("分页结果为空");
