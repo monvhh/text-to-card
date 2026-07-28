@@ -1,5 +1,83 @@
 # Text to Card for Obsidian
 
+Convert an Obsidian note or selected Markdown into multi-page 3:4 image cards.
+Pagination and rendering run locally in Canvas, and note content is never uploaded.
+
+## Features
+
+- Twelve built-in visual templates
+- PNG and JPEG export at 1242-pixel width
+- Canvas preview with page reordering, merging and removal
+- Markdown headings, lists, quotes, code, images, callouts, tasks and footnotes
+- Obsidian Wiki links, image embeds, note embeds and section embeds
+- Optional file-name heading with duplicate-title prevention
+- Custom colors, typography, cover image, Logo, signature and watermark
+- Batch generation by Vault folder and tag
+- Optional image-link insertion, first-image clipboard copy and output reveal
+- Responsive layouts for desktop and mobile Obsidian
+
+## Installation
+
+After the plugin is accepted into the Community directory, install **Text to Card**
+from **Settings → Community plugins → Browse**.
+
+For manual installation, download `main.js`, `manifest.json` and `styles.css` from
+the [latest GitHub release](https://github.com/monvhh/text-to-card/releases/latest).
+Place them in:
+
+```text
+YourVault/.obsidian/plugins/xhs-text-card/
+```
+
+Reload Obsidian, then enable **Text to Card** under **Community plugins**.
+
+## Usage
+
+Open a Markdown note, then run **Generate Xiaohongshu image cards** from the
+command palette. The same action is available from the ribbon and context menus.
+Choose a template and export settings, review the generated pages, and confirm
+the export.
+
+If text is selected in the editor, only the selection is converted. Otherwise,
+the entire active note is used.
+
+## Permissions, privacy and security
+
+- **Vault file enumeration:** Batch generation lists Markdown files only after
+  the user explicitly starts a batch operation. This is used to find notes in
+  the selected folder and apply the optional tag filter.
+- **Vault read access:** The plugin reads the note selected by the user and any
+  images, notes or sections embedded by that note.
+- **Vault write access:** Generated images are written to the configured Vault
+  output folder. The plugin modifies a source note only when the user enables
+  insertion of generated image links.
+- **Clipboard write access:** When the optional **Copy first image** action is
+  enabled, the plugin writes the first generated image to the system clipboard.
+  It does not read existing clipboard contents. Unsupported devices show a
+  notice without interrupting image generation.
+- **Network access:** Notes are not uploaded. A remote image referenced in
+  Markdown is requested directly from its original host, which can expose
+  standard request information to that host. Vault-local images do not make
+  network requests.
+- The plugin has no accounts, payments, subscriptions, advertisements or
+  telemetry.
+- The plugin does not publish content to Xiaohongshu or any other platform.
+
+## Support and source code
+
+Report bugs and request features through
+[GitHub Issues](https://github.com/monvhh/text-to-card/issues).
+The plugin is open source under the MIT License.
+
+The rendering, template and pagination engine is adapted from
+[geekfoxcharlie/XHS-TextCard](https://github.com/geekfoxcharlie/XHS-TextCard),
+also licensed under the MIT License. The upstream license and attribution notice
+are included in this repository.
+
+---
+
+## 中文说明
+
 把 Obsidian 笔记或选中的 Markdown 内容转换为 3:4 小红书图文卡片。所有内容
 在本地 Canvas 中完成分页和渲染，不上传笔记。
 

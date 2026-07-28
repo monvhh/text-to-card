@@ -1,6 +1,6 @@
 {
   "name": "obsidian-xhs-text-card",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Generate Xiaohongshu-style image cards from Obsidian notes.",
   "main": "main.js",
   "type": "module",
