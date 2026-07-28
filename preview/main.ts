@@ -50,6 +50,7 @@ const PREVIEW_HEIGHT = 667;
 const PREVIEW_SCALE = 1.4;
 const EXPORT_SCALE = 1242 / PREVIEW_WIDTH;
 const STORAGE_KEY = "xhs-text-card-preview-settings-v1";
+const SHOW_ADVANCED_BLOCK_EDITOR = false;
 
 interface PreviewSettings {
   templateId: TemplateId;
@@ -509,11 +510,10 @@ function createCardNode(
 
   canvas.className = "preview-canvas";
   header.append(label, actions);
-  article.append(
-    header,
-    canvas,
-    createBlockEditor(index, layouts)
-  );
+  article.append(header, canvas);
+  if (SHOW_ADVANCED_BLOCK_EDITOR) {
+    article.append(createBlockEditor(index, layouts));
+  }
   return article;
 }
 

@@ -9,6 +9,8 @@ import {
 } from "../services/card-generator";
 import { summarizeCardLayout } from "../utils/layout-summary";
 
+const SHOW_ADVANCED_BLOCK_EDITOR = false;
+
 export class PageEditorModal extends Modal {
   private readonly originalPages: unknown[][];
   private readonly expandedPages = new Set<number>();
@@ -148,7 +150,9 @@ export class PageEditorModal extends Modal {
         );
       }
 
-      this.renderBlocks(card, pageIndex);
+      if (SHOW_ADVANCED_BLOCK_EDITOR) {
+        this.renderBlocks(card, pageIndex);
+      }
     }
   }
 
