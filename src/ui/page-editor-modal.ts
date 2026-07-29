@@ -25,6 +25,7 @@ export class PageEditorModal extends Modal {
     private readonly onExport: (
       session: CardGenerationSession
     ) => Promise<void>,
+    private readonly onEditSettings: () => void,
     private readonly onCancel: () => void
   ) {
     super(app);
@@ -60,7 +61,7 @@ export class PageEditorModal extends Modal {
       text: `${this.session.pages.length} 张卡片`
     });
     summary.createSpan({
-      text: "可移动页面、合并、按内容块拆分或隐藏内容"
+      text: `${this.session.width} × ${this.session.height} 基准画布 · 检查生成效果，可删除不需要的卡片`
     });
 
     const toolbarActions = toolbar.createDiv({
@@ -76,13 +77,17 @@ export class PageEditorModal extends Modal {
       });
     }
 
-    const cancelButton = toolbarActions.createEl("button", {
-      text: "取消"
+    const editButton = toolbarActions.createEl("button", {
+      text: "修改设置"
     });
-    cancelButton.addEventListener("click", () => this.close());
+    editButton.addEventListener("click", () => {
+      this.finished = true;
+      this.close();
+      this.onEditSettings();
+    });
 
     const exportButton = toolbarActions.createEl("button", {
-      text: "确认并导出",
+      text: "保存卡片",
       cls: "mod-cta"
     });
     const exceedsLimit =
@@ -102,7 +107,7 @@ export class PageEditorModal extends Modal {
     if (exceedsLimit) {
       this.contentEl.createDiv({
         cls: "xhs-page-editor-warning",
-        text: `当前 ${this.session.pages.length} 张，超过最大页数 ${this.maxPages}，请合并或隐藏部分内容后导出。`
+        text: `当前 ${this.session.pages.length} 张，超过最大页数 ${this.maxPages}，请删除部分卡片或返回设置提高限制。`
       });
     }
 
@@ -172,27 +177,6 @@ export class PageEditorModal extends Modal {
       cls: "xhs-page-editor-card-actions"
     });
 
-    this.addAction(actions, "←", pageIndex > 0, () => {
-      swap(this.session.pages, pageIndex, pageIndex - 1);
-    });
-    this.addAction(
-      actions,
-      "→",
-      pageIndex < this.session.pages.length - 1,
-      () => {
-        swap(this.session.pages, pageIndex, pageIndex + 1);
-      }
-    );
-    this.addAction(
-      actions,
-      "合并下一张",
-      pageIndex < this.session.pages.length - 1,
-      () => {
-        const next = this.session.pages[pageIndex + 1] ?? [];
-        this.session.pages[pageIndex]?.push(...next);
-        this.session.pages.splice(pageIndex + 1, 1);
-      }
-    );
     this.addAction(
       actions,
       "删除",

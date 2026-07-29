@@ -25,7 +25,8 @@ class CanvasTextEngine {
         const oldConfig = this.config || {};
         this.config = {
             fontSize: 16, lineHeight: 1.6, letterSpacing: 0,
-            fontFamily: defaultFont, textPadding: 35, cardWidth: PREVIEW_WIDTH || 500,
+            fontFamily: defaultFont, textPadding: 35,
+            cardWidth: Number(config.canvasWidth) || PREVIEW_WIDTH || 500,
             ...config
         };
 

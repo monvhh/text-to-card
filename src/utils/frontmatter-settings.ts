@@ -3,6 +3,7 @@ import {
   TEMPLATE_IDS,
   type TemplateId
 } from "../templates";
+import { isPageRatio } from "./page-ratio";
 
 export interface FrontmatterSettingsResult {
   settings: XhsTextCardSettings;
@@ -44,6 +45,10 @@ export function applyFrontmatterSettings(
   assign(
     "exportFormat",
     readFormat(frontmatter["xhs-format"])
+  );
+  assign(
+    "pageRatio",
+    readPageRatio(frontmatter["xhs-page-ratio"])
   );
   assign(
     "outputFolder",
@@ -163,6 +168,12 @@ function readFormat(
   return value === "png" || value === "jpeg"
     ? value
     : undefined;
+}
+
+function readPageRatio(
+  value: unknown
+): XhsTextCardSettings["pageRatio"] | undefined {
+  return isPageRatio(value) ? value : undefined;
 }
 
 function readString(

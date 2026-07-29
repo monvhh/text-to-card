@@ -2,14 +2,18 @@ import assert from "node:assert/strict";
 import { build } from "esbuild";
 
 const module = await bundleModules([
+  "src/feature-flags.ts",
   "src/utils/batch.ts",
   "src/utils/custom-templates.ts",
   "src/utils/frontmatter-settings.ts",
+  "src/utils/font-presets.ts",
   "src/utils/layout-summary.ts",
+  "src/utils/page-ratio.ts",
   "src/settings.ts",
   "src/templates/index.ts"
 ]);
 
+assert.equal(module.SHOW_CUSTOM_TEMPLATES, false);
 assert.equal(module.isPathInFolder("Posts/a.md", "Posts"), true);
 assert.equal(module.isPathInFolder("Other/a.md", "Posts"), false);
 assert.equal(module.isPathInFolder("Other/a.md", ""), true);
@@ -95,12 +99,36 @@ assert.equal(module.DEFAULT_SETTINGS.bgColor, "#ffffff");
 assert.equal(module.DEFAULT_SETTINGS.textColor, "#1a1a1a");
 assert.equal(module.DEFAULT_SETTINGS.accentColor, "#8c3a3a");
 assert.equal(module.DEFAULT_SETTINGS.fontSize, 18);
+assert.equal(module.DEFAULT_SETTINGS.pageRatio, "3:4");
 assert.equal(module.DEFAULT_SETTINGS.useFileNameAsTitle, true);
 assert.equal(
   module.applyFrontmatterSettings(module.DEFAULT_SETTINGS, {
     "xhs-use-file-title": false
   }).settings.useFileNameAsTitle,
   false
+);
+assert.equal(
+  module.applyFrontmatterSettings(module.DEFAULT_SETTINGS, {
+    "xhs-page-ratio": "9:16"
+  }).settings.pageRatio,
+  "9:16"
+);
+assert.deepEqual(
+  module.getPageDimensions("2:3"),
+  { width: 500, height: 750 }
+);
+assert.deepEqual(
+  module.getPageDimensions("3:4"),
+  { width: 500, height: 667 }
+);
+assert.deepEqual(
+  module.getPageDimensions("9:16"),
+  { width: 500, height: 889 }
+);
+assert.equal(module.FONT_PRESETS.length, 9);
+assert.equal(
+  module.findFontPresetByValue("'Noto Serif SC', serif")?.id,
+  "noto-serif-sc"
 );
 const minimalistConfig = module.getTemplate(
   "minimalist-magazine"

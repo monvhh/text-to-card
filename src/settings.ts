@@ -1,4 +1,5 @@
 import type { TemplateId } from "./templates";
+import type { PageRatio } from "./utils/page-ratio";
 
 export type ExportFormat = "png" | "jpeg";
 
@@ -32,6 +33,7 @@ export interface XhsTextCardSettings {
   templateId: TemplateId;
   templateSelection: string;
   exportFormat: ExportFormat;
+  pageRatio: PageRatio;
   outputFolder: string;
   includeCover: boolean;
   coverImagePath: string;
@@ -66,6 +68,7 @@ export const DEFAULT_SETTINGS: XhsTextCardSettings = {
   templateId: "minimalist-magazine",
   templateSelection: "minimalist-magazine",
   exportFormat: "png",
+  pageRatio: "3:4",
   outputFolder: "XHS-Cards",
   includeCover: true,
   coverImagePath: "",

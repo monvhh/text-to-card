@@ -36,7 +36,7 @@ export class BatchGenerateModal extends Modal {
 
   onOpen(): void {
     this.modalEl.addClass("xhs-batch-modal");
-    this.titleEl.setText("批量生成小红书卡片");
+    this.titleEl.setText("Make cards in batch");
     this.render();
   }
 

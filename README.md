@@ -7,11 +7,14 @@ Pagination and rendering run locally in Canvas, and note content is never upload
 
 - Twelve built-in visual templates
 - PNG and JPEG export at 1242-pixel width
-- Canvas preview with page reordering, merging and removal
+- 2:3, 3:4 and 9:16 page ratios with automatic repagination
+- Canvas preview with optional page removal
 - Markdown headings, lists, quotes, code, images, callouts, tasks and footnotes
 - Obsidian Wiki links, image embeds, note embeds and section embeds
 - Optional file-name heading with duplicate-title prevention
-- Custom colors, typography, cover image, Logo, signature and watermark
+- Fixed template backgrounds, custom text/accent colors, typography, cover image, Logo, signature and watermark
+- Vault image pickers for cover images and Logos
+- Nine font presets plus custom font-family support
 - Batch generation by Vault folder and tag
 - Optional image-link insertion, first-image clipboard copy and output reveal
 - Responsive layouts for desktop and mobile Obsidian
@@ -33,10 +36,14 @@ Reload Obsidian, then enable **Text to Card** under **Community plugins**.
 
 ## Usage
 
-Open a Markdown note, then run **Generate Xiaohongshu image cards** from the
-command palette. The same action is available from the ribbon and context menus.
-Choose a template and export settings, review the generated pages, and confirm
-the export.
+Open a Markdown note, then run **Make cards** from the
+command palette to generate and save images immediately with the current
+settings. The same quick action is available from the ribbon and context menus.
+Run **Preview cards** when you want to change export settings, review or adjust
+the template or cover, review or adjust pages, then save the cards from the
+preview. Typography, colors, branding, output and post-generation actions are
+managed once in the plugin settings. Use **Make cards in batch** to select a
+folder, tag and templates before saving all matched notes directly.
 
 If text is selected in the editor, only the selection is converted. Otherwise,
 the entire active note is used.
@@ -83,11 +90,16 @@ are included in this repository.
 
 ## v1.0 功能
 
-- 内置 12 款模板，支持 PNG、JPEG 和 1242 像素高清输出
-- 插件内 Canvas 预览，可移动、合并、拆分和隐藏页面
+- 内置 12 款模板，支持 2:3、3:4、9:16 页面比例
+- 支持 PNG、JPEG 和 1242 像素宽高清输出
+- 插件内 Canvas 预览，可删除不需要的页面
+- 单篇与批量快速生成命令直接保存图片，另有独立预览命令
 - 浏览器开发预览支持实时 Markdown、页级编辑和 ZIP 下载
-- 字号、行高、字间距、边距、主题色、字体、封面、Logo、签名和水印
-- 自定义模板创建、复制、JSON 导入导出、收藏和最近使用
+- 字号、行高、字间距、边距、文字/强调色、字体、封面、Logo、签名和水印
+- 背景色由模板固定，不读取 Obsidian 明暗主题
+- 9 组字体预设，并保留自定义字体族
+- 封面和 Logo 可直接从 Vault 选择，无需手动输入路径
+- 自定义模板实现暂时隐藏，源码、数据兼容和测试继续保留
 - 品牌色、签名、字体和 Logo 预设
 - `---` 强制分页、隐藏内容、内容块锁定和最大页数限制
 - Obsidian 图片、Wiki 链接、笔记/章节嵌入、Callout、任务列表和脚注
@@ -132,6 +144,7 @@ npm run check:all
 
 - [安装和使用方法](docs/USAGE.md)
 - [完整产品功能](docs/PRODUCT.md)
+- [自定义模板功能与实现说明](docs/CUSTOM_TEMPLATES.md)
 - [测试与发布检查](docs/TESTING.md)
 
 ## 权限、隐私与披露

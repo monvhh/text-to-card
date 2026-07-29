@@ -10,6 +10,16 @@ import type { ExportFormat } from "../src/settings";
 import { processPaginationDirectives } from "../src/utils/pagination-directives";
 import { normalizeMarkdownFeatures } from "../src/utils/markdown-features";
 import { summarizeCardLayout } from "../src/utils/layout-summary";
+import {
+  getPageDimensions,
+  isPageRatio,
+  type PageRatio
+} from "../src/utils/page-ratio";
+import {
+  CUSTOM_FONT_PRESET_ID,
+  findFontPresetByValue,
+  FONT_PRESETS
+} from "../src/utils/font-presets";
 
 const SAMPLE_MARKDOWN = `# 把 Obsidian 笔记变成小红书图卡
 
@@ -46,7 +56,6 @@ const SAMPLE_MARKDOWN = `# 把 Obsidian 笔记变成小红书图卡
 `;
 
 const PREVIEW_WIDTH = 500;
-const PREVIEW_HEIGHT = 667;
 const PREVIEW_SCALE = 1.4;
 const EXPORT_SCALE = 1242 / PREVIEW_WIDTH;
 const STORAGE_KEY = "xhs-text-card-preview-settings-v1";
@@ -55,6 +64,7 @@ const SHOW_ADVANCED_BLOCK_EDITOR = false;
 
 interface PreviewSettings {
   templateId: TemplateId;
+  pageRatio: PageRatio;
   fontSize: number;
   lineHeight: number;
   letterSpacing: number;
@@ -89,6 +99,8 @@ interface PreviewBrandPreset {
 
 const markdownInput = getElement<HTMLTextAreaElement>("markdown-input");
 const templateSelect = getElement<HTMLSelectElement>("template-select");
+const pageRatioSelect =
+  getElement<HTMLSelectElement>("page-ratio");
 const fontSizeInput = getElement<HTMLInputElement>("font-size");
 const fontSizeOutput = getElement<HTMLOutputElement>("font-size-output");
 const lineHeightInput = getElement<HTMLInputElement>("line-height");
@@ -111,6 +123,8 @@ const includeCoverInput =
   getElement<HTMLInputElement>("include-cover");
 const coverImageUrlInput =
   getElement<HTMLInputElement>("cover-image-url");
+const coverImageFileInput =
+  getElement<HTMLInputElement>("cover-image-file");
 const coverTitleInput =
   getElement<HTMLInputElement>("cover-title");
 const signatureInput = getElement<HTMLInputElement>("signature");
@@ -123,8 +137,12 @@ const maxPagesInput =
   getElement<HTMLInputElement>("max-pages");
 const fontFamilyInput =
   getElement<HTMLInputElement>("font-family");
+const fontPresetSelect =
+  getElement<HTMLSelectElement>("font-preset");
 const logoUrlInput =
   getElement<HTMLInputElement>("logo-url");
+const logoFileInput =
+  getElement<HTMLInputElement>("logo-file");
 const brandSelect =
   getElement<HTMLSelectElement>("brand-select");
 const brandNameInput =
@@ -157,6 +175,8 @@ let currentRenderer =
 let renderTimer: number | undefined;
 let pageOverflow = false;
 let previewBrandPresets: PreviewBrandPreset[] = [];
+let localLogoUrl = "";
+let localCoverImageUrl = "";
 
 initialize();
 
@@ -167,6 +187,17 @@ function initialize(): void {
     option.textContent = getTemplateName(templateId);
     templateSelect.append(option);
   }
+
+  for (const preset of FONT_PRESETS) {
+    const option = createHtmlElement("option");
+    option.value = preset.id;
+    option.textContent = preset.name;
+    fontPresetSelect.append(option);
+  }
+  const customFontOption = createHtmlElement("option");
+  customFontOption.value = CUSTOM_FONT_PRESET_ID;
+  customFontOption.textContent = "自定义字体";
+  fontPresetSelect.append(customFontOption);
 
   const savedSettings = loadPreviewSettings();
   activeTemplateId =
@@ -179,6 +210,7 @@ function initialize(): void {
     previewBrandPresets = savedSettings.brandPresets;
     applySavedSettings(savedSettings);
   } else {
+    pageRatioSelect.value = "3:4";
     includeCoverInput.checked = true;
     coverTitleInput.value =
       "把 Obsidian 笔记变成小红书图卡";
@@ -192,6 +224,7 @@ function initialize(): void {
     coverImageUrlInput.value = "";
   }
 
+  syncFontPresetSelection();
   populateBrandSelect();
   registerEvents();
   void renderPreview();
@@ -207,6 +240,13 @@ function registerEvents(): void {
     "input",
     handleSettingChange
   );
+  coverImageFileInput.addEventListener("change", () => {
+    localCoverImageUrl = replaceLocalImageUrl(
+      localCoverImageUrl,
+      coverImageFileInput.files?.[0]
+    );
+    scheduleRender();
+  });
   showPageNumberInput.addEventListener(
     "change",
     handleSettingChange
@@ -220,7 +260,28 @@ function registerEvents(): void {
   );
   maxPagesInput.addEventListener("input", handleSettingChange);
   fontFamilyInput.addEventListener("input", handleSettingChange);
+  fontFamilyInput.addEventListener(
+    "change",
+    syncFontPresetSelection
+  );
+  fontPresetSelect.addEventListener("change", () => {
+    const preset = FONT_PRESETS.find(
+      (item) => item.id === fontPresetSelect.value
+    );
+
+    if (preset) {
+      fontFamilyInput.value = preset.value;
+      handleSettingChange();
+    }
+  });
   logoUrlInput.addEventListener("input", handleSettingChange);
+  logoFileInput.addEventListener("change", () => {
+    localLogoUrl = replaceLocalImageUrl(
+      localLogoUrl,
+      logoFileInput.files?.[0]
+    );
+    scheduleRender();
+  });
   coverTitleInput.addEventListener("change", savePreviewSettings);
   signatureInput.addEventListener("change", savePreviewSettings);
   includeCoverInput.addEventListener(
@@ -255,6 +316,10 @@ function registerEvents(): void {
       new window.XHS_TEXT_CARD_CORE.CanvasRenderer();
     handleSettingChange();
   });
+  pageRatioSelect.addEventListener(
+    "change",
+    handleSettingChange
+  );
 
   resetSampleButton.addEventListener("click", () => {
     markdownInput.value = SAMPLE_MARKDOWN;
@@ -306,6 +371,7 @@ function applyTemplateDefaults(templateId: TemplateId): void {
     typeof template.config.fontFamily === "string"
       ? template.config.fontFamily
       : "inherit";
+  syncFontPresetSelection();
   updateRangeOutputs();
 }
 
@@ -351,15 +417,21 @@ async function renderPreview(): Promise<void> {
 
     await document.fonts?.ready;
     const template = getTemplate(activeTemplateId);
+    const fixedBackgroundColor = normalizeHexColor(
+      template.config.bgColor,
+      "#ffffff"
+    );
+    const { width, height } = getCurrentPageDimensions();
     const signatureText = signatureInput.value.trim();
-    const logoImage = logoUrlInput.value.trim();
+    const logoImage =
+      localLogoUrl || logoUrlInput.value.trim();
     const config: Record<string, unknown> = {
       ...template.config,
       fontSize: Number(fontSizeInput.value),
       lineHeight: Number(lineHeightInput.value),
       letterSpacing: Number(letterSpacingInput.value),
       textPadding: Number(textPaddingInput.value),
-      bgColor: bgColorInput.value,
+      bgColor: fixedBackgroundColor,
       textColor: textColorInput.value,
       accentColor: accentColorInput.value,
       fontFamily: fontFamilyInput.value.trim() || "inherit",
@@ -369,6 +441,7 @@ async function renderPreview(): Promise<void> {
       logoPadding: 24,
       hasCover: includeCoverInput.checked,
       coverImage:
+        localCoverImageUrl ||
         coverImageUrlInput.value.trim() ||
         template.config.coverImage,
       coverTitle:
@@ -378,7 +451,9 @@ async function renderPreview(): Promise<void> {
       hasWatermark: Boolean(watermarkInput.value.trim()),
       watermarkText: watermarkInput.value.trim(),
       showPageNumber: showPageNumberInput.checked,
-      showGrid: false
+      showGrid: false,
+      canvasWidth: width,
+      canvasHeight: height
     };
 
     const splitter =
@@ -400,8 +475,8 @@ async function renderPreview(): Promise<void> {
           totalCount: pages.length,
           config,
           templateId: activeTemplateId,
-          width: PREVIEW_WIDTH,
-          height: PREVIEW_HEIGHT,
+          width,
+          height,
           scale: PREVIEW_SCALE
         });
 
@@ -479,33 +554,6 @@ function createCardNode(
   const actions = createHtmlElement("div");
   actions.className = "card-item-actions";
   actions.append(
-    createPageAction("←", index > 0, () => {
-      swapPages(index, index - 1);
-    }),
-    createPageAction("→", index < totalCount - 1, () => {
-      swapPages(index, index + 1);
-    }),
-    createPageAction(
-      "合并",
-      index < totalCount - 1,
-      () => {
-        const next = currentPages[index + 1] ?? [];
-        currentPages[index]?.push(...next);
-        currentPages.splice(index + 1, 1);
-        void renderEditedPages();
-      }
-    ),
-    createPageAction(
-      "拆分",
-      (currentPages[index]?.length ?? 0) > 1,
-      () => {
-        const page = currentPages[index] ?? [];
-        const splitAt = Math.ceil(page.length / 2);
-        const next = page.splice(splitAt);
-        currentPages.splice(index + 1, 0, next);
-        void renderEditedPages();
-      }
-    ),
     createPageAction("隐藏", totalCount > 1, () => {
       currentPages.splice(index, 1);
       void renderEditedPages();
@@ -680,19 +728,6 @@ function createPageAction(
   return button;
 }
 
-function swapPages(a: number, b: number): void {
-  const first = currentPages[a];
-  const second = currentPages[b];
-
-  if (!first || !second) {
-    return;
-  }
-
-  currentPages[a] = second;
-  currentPages[b] = first;
-  void renderEditedPages();
-}
-
 function swapItems<T>(items: T[], a: number, b: number): void {
   const first = items[a];
   const second = items[b];
@@ -720,6 +755,7 @@ async function renderEditedPages(): Promise<void> {
   hideError();
 
   try {
+    const { width, height } = getCurrentPageDimensions();
     const cardNodes = await Promise.all(
       currentPages.map(async (layouts, index) => {
         const canvas = await currentRenderer.render({
@@ -728,8 +764,8 @@ async function renderEditedPages(): Promise<void> {
           totalCount: currentPages.length,
           config: currentConfig,
           templateId: activeTemplateId,
-          width: PREVIEW_WIDTH,
-          height: PREVIEW_HEIGHT,
+          width,
+          height,
           scale: PREVIEW_SCALE
         });
 
@@ -786,14 +822,15 @@ async function downloadPage(index: number): Promise<void> {
   setDownloadState(true, `正在导出第 ${index + 1} 张…`);
 
   try {
+    const { width, height } = getCurrentPageDimensions();
     const canvas = await currentRenderer.render({
       layouts,
       index,
       totalCount: currentPages.length,
       config: currentConfig,
       templateId: activeTemplateId,
-      width: PREVIEW_WIDTH,
-      height: PREVIEW_HEIGHT,
+      width,
+      height,
       scale: EXPORT_SCALE
     });
 
@@ -828,6 +865,7 @@ async function downloadAllPages(): Promise<void> {
   setDownloadState(true, "正在准备 ZIP…");
 
   try {
+    const { width, height } = getCurrentPageDimensions();
     const zip = new JSZip();
     const format =
       exportFormatSelect.value as ExportFormat;
@@ -844,8 +882,8 @@ async function downloadAllPages(): Promise<void> {
         totalCount: currentPages.length,
         config: currentConfig,
         templateId: activeTemplateId,
-        width: PREVIEW_WIDTH,
-        height: PREVIEW_HEIGHT,
+        width,
+        height,
         scale: EXPORT_SCALE
       });
 
@@ -986,6 +1024,9 @@ function loadPreviewSettings(): PreviewSettings | null {
 
     return {
       templateId: value.templateId,
+      pageRatio: isPageRatio(value.pageRatio)
+        ? value.pageRatio
+        : "3:4",
       fontSize:
         value.templateId === "minimalist-magazine" &&
         readFiniteNumber(value.fontSize, 18) === 14
@@ -1052,11 +1093,15 @@ function loadPreviewSettings(): PreviewSettings | null {
 function applySavedSettings(settings: PreviewSettings): void {
   activeTemplateId = settings.templateId;
   templateSelect.value = settings.templateId;
+  pageRatioSelect.value = settings.pageRatio;
   fontSizeInput.value = String(settings.fontSize);
   lineHeightInput.value = String(settings.lineHeight);
   letterSpacingInput.value = String(settings.letterSpacing);
   textPaddingInput.value = String(settings.textPadding);
-  bgColorInput.value = settings.bgColor;
+  bgColorInput.value = normalizeHexColor(
+    getTemplate(settings.templateId).config.bgColor,
+    "#ffffff"
+  );
   textColorInput.value = settings.textColor;
   accentColorInput.value = settings.accentColor;
   includeCoverInput.checked = settings.includeCover;
@@ -1068,6 +1113,7 @@ function applySavedSettings(settings: PreviewSettings): void {
   exportFormatSelect.value = settings.exportFormat;
   maxPagesInput.value = String(settings.maxPages);
   fontFamilyInput.value = settings.fontFamily;
+  syncFontPresetSelection();
   logoUrlInput.value = settings.logoUrl;
   updateRangeOutputs();
 }
@@ -1075,6 +1121,7 @@ function applySavedSettings(settings: PreviewSettings): void {
 function savePreviewSettings(): void {
   const settings: PreviewSettings = {
     templateId: activeTemplateId,
+    pageRatio: getSelectedPageRatio(),
     fontSize: Number(fontSizeInput.value),
     lineHeight: Number(lineHeightInput.value),
     letterSpacing: Number(letterSpacingInput.value),
@@ -1104,6 +1151,36 @@ function savePreviewSettings(): void {
   } catch {
     // Preview still works when storage is unavailable.
   }
+}
+
+function getSelectedPageRatio(): PageRatio {
+  return isPageRatio(pageRatioSelect.value)
+    ? pageRatioSelect.value
+    : "3:4";
+}
+
+function getCurrentPageDimensions(): {
+  width: number;
+  height: number;
+} {
+  return getPageDimensions(getSelectedPageRatio());
+}
+
+function syncFontPresetSelection(): void {
+  fontPresetSelect.value =
+    findFontPresetByValue(fontFamilyInput.value.trim())?.id ??
+    CUSTOM_FONT_PRESET_ID;
+}
+
+function replaceLocalImageUrl(
+  previousUrl: string,
+  file: File | undefined
+): string {
+  if (previousUrl) {
+    URL.revokeObjectURL(previousUrl);
+  }
+
+  return file ? URL.createObjectURL(file) : "";
 }
 
 function isTemplateId(value: unknown): value is TemplateId {

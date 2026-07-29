@@ -14,6 +14,7 @@ import {
 import {
   CardGenerator,
   type CardGenerationOptions,
+  type CardGenerationResult,
   type CardGenerationSession
 } from "./services/card-generator";
 import {
@@ -51,26 +52,39 @@ export default class XhsTextCardPlugin extends Plugin {
 
     this.addRibbonIcon(
       "images",
-      "生成小红书卡片",
-      () => this.openForActiveNote()
+      "Make cards",
+      () => this.makeForActiveNote()
     );
 
     this.addCommand({
       id: "generate-cards",
-      name: "生成小红书卡片",
+      name: "Make cards",
       editorCallback: (editor, view) => {
         if (!view.file) {
           new Notice("请先打开一个 Markdown 文件");
           return;
         }
 
-        this.openFromEditor(editor, view.file);
+        void this.makeFromEditor(editor, view.file);
+      }
+    });
+
+    this.addCommand({
+      id: "preview-cards",
+      name: "Preview cards",
+      editorCallback: (editor, view) => {
+        if (!view.file) {
+          new Notice("请先打开一个 Markdown 文件");
+          return;
+        }
+
+        this.previewFromEditor(editor, view.file);
       }
     });
 
     this.addCommand({
       id: "batch-generate-cards",
-      name: "批量生成小红书卡片",
+      name: "Make cards in batch",
       callback: () => this.openBatchGenerator()
     });
 
@@ -91,10 +105,10 @@ export default class XhsTextCardPlugin extends Plugin {
 
           menu.addItem((item) => {
             item
-              .setTitle("生成小红书卡片")
+              .setTitle("Make cards")
               .setIcon("images")
               .onClick(() => {
-                this.openFromEditor(editor, info.file!);
+                void this.makeFromEditor(editor, info.file!);
               });
           });
         }
@@ -114,10 +128,10 @@ export default class XhsTextCardPlugin extends Plugin {
 
           menu.addItem((item) => {
             item
-              .setTitle("生成小红书卡片")
+              .setTitle("Make cards")
               .setIcon("images")
               .onClick(() => {
-                void this.openFromFile(file);
+                void this.makeFromFile(file);
               });
           });
         }
@@ -145,9 +159,7 @@ export default class XhsTextCardPlugin extends Plugin {
 
     for (const key of [
       "brandPresets",
-      "customTemplates",
-      "favoriteTemplateIds",
-      "recentTemplateIds"
+      "customTemplates"
     ] as const) {
       if (!Array.isArray(this.settings[key])) {
         this.settings[key] = [];
@@ -159,7 +171,7 @@ export default class XhsTextCardPlugin extends Plugin {
     await this.saveData(this.settings);
   }
 
-  private openForActiveNote(): void {
+  private makeForActiveNote(): void {
     const view =
       this.app.workspace.getActiveViewOfType(MarkdownView);
 
@@ -168,26 +180,51 @@ export default class XhsTextCardPlugin extends Plugin {
       return;
     }
 
-    this.openFromEditor(view.editor, view.file);
+    void this.makeFromEditor(view.editor, view.file);
   }
 
-  private openFromEditor(editor: Editor, file: TFile): void {
+  private async makeFromEditor(
+    editor: Editor,
+    file: TFile
+  ): Promise<void> {
     const selection = editor.getSelection();
     const insertionPosition = selection
       ? editor.getCursor("to")
       : getDocumentEnd(editor);
 
-    this.openGenerator(
+    await this.generateDirectly(
       selection || editor.getValue(),
       file,
       { editor, insertionPosition }
     );
   }
 
-  private async openFromFile(file: TFile): Promise<void> {
+  private async makeFromFile(file: TFile): Promise<void> {
     const markdown = await this.app.vault.cachedRead(file);
 
-    this.openGenerator(markdown, file, {});
+    await this.generateDirectly(markdown, file, {});
+  }
+
+  private previewFromEditor(
+    editor: Editor,
+    file: TFile
+  ): void {
+    const selection = editor.getSelection();
+    const insertionPosition = selection
+      ? editor.getCursor("to")
+      : getDocumentEnd(editor);
+
+    this.openPreview(
+      selection || editor.getValue(),
+      file,
+      { editor, insertionPosition }
+    );
+  }
+
+  private async previewFromFile(file: TFile): Promise<void> {
+    const markdown = await this.app.vault.cachedRead(file);
+
+    this.openPreview(markdown, file, {});
   }
 
   private openBatchGenerator(): void {
@@ -343,12 +380,12 @@ export default class XhsTextCardPlugin extends Plugin {
           params.update === "true"
         );
       } else {
-        await this.openFromFile(file);
+        await this.previewFromFile(file);
       }
       return;
     }
 
-    this.openForActiveNote();
+    this.makeForActiveNote();
   }
 
   private async runFilesDirectly(
@@ -367,10 +404,11 @@ export default class XhsTextCardPlugin extends Plugin {
     );
   }
 
-  private openGenerator(
+  private openPreview(
     markdown: string,
     file: TFile,
-    context: GenerationContext
+    context: GenerationContext,
+    initialOptions?: CardGenerationOptions
   ): void {
     if (this.isGenerating) {
       new Notice("已有生成任务正在进行");
@@ -396,8 +434,60 @@ export default class XhsTextCardPlugin extends Plugin {
           context,
           !resolved.hasOverrides
         );
-      }
+      },
+      initialOptions
     ).open();
+  }
+
+  private async generateDirectly(
+    markdown: string,
+    file: TFile,
+    context: GenerationContext
+  ): Promise<void> {
+    if (this.isGenerating) {
+      new Notice("已有生成任务正在进行");
+      return;
+    }
+
+    const frontmatter =
+      this.app.metadataCache.getFileCache(file)?.frontmatter;
+    const resolved = applyFrontmatterSettings(
+      this.settings,
+      frontmatter
+    );
+    const options: CardGenerationOptions = {
+      ...resolved.settings,
+      coverTitle: resolved.coverTitle ?? file.basename
+    };
+    const notice = new Notice("正在生成卡片……", 0);
+    this.isGenerating = true;
+
+    try {
+      const result = await this.generator.generate(
+        markdown,
+        file,
+        options
+      );
+      await this.completeGeneration(
+        result,
+        file,
+        options,
+        context
+      );
+    } catch (error) {
+      console.error("[Text to Card] Generation failed", error);
+      new Notice(
+        `生成失败：${
+          error instanceof Error
+            ? error.message
+            : String(error)
+        }`,
+        10000
+      );
+    } finally {
+      notice.hide();
+      this.isGenerating = false;
+    }
   }
 
   private async generate(
@@ -415,6 +505,7 @@ export default class XhsTextCardPlugin extends Plugin {
         templateId: options.templateId,
         templateSelection: options.templateSelection,
         exportFormat: options.exportFormat,
+        pageRatio: options.pageRatio,
         outputFolder: options.outputFolder,
         includeCover: options.includeCover,
         coverImagePath: options.coverImagePath,
@@ -441,11 +532,7 @@ export default class XhsTextCardPlugin extends Plugin {
         logoPath: options.logoPath,
         brandPresetId: options.brandPresetId,
         updateExisting: options.updateExisting,
-        outputNameSuffix: options.outputNameSuffix,
-        recentTemplateIds: updateRecentTemplates(
-          this.settings.recentTemplateIds,
-          options.templateSelection
-        )
+        outputNameSuffix: options.outputNameSuffix
       };
     }
 
@@ -476,6 +563,15 @@ export default class XhsTextCardPlugin extends Plugin {
             file,
             options,
             context
+          );
+        },
+        () => {
+          this.isGenerating = false;
+          this.openPreview(
+            markdown,
+            file,
+            context,
+            options
           );
         },
         () => {
@@ -517,82 +613,11 @@ export default class XhsTextCardPlugin extends Plugin {
         file,
         options
       );
-      const completedActions: string[] = [];
-
-      if (options.insertLinksAfterGenerate) {
-        if (context.editor && context.insertionPosition) {
-          insertGeneratedImageLinks(
-            context.editor,
-            context.insertionPosition,
-            result.files
-          );
-        } else {
-          await appendGeneratedImageLinks(
-            this.app,
-            file,
-            result.files
-          );
-        }
-        completedActions.push("已插入图片链接");
-      }
-
-      if (
-        options.copyFirstImageAfterGenerate &&
-        result.files[0]
-      ) {
-        try {
-          await copyVaultImageToClipboard(
-            this.app,
-            result.files[0]
-          );
-          completedActions.push("首图已复制");
-        } catch (error) {
-          console.warn(
-            "[Text to Card] Copy image failed",
-            error
-          );
-          new Notice(
-            `图片已生成，但复制首图失败：${
-              error instanceof Error
-                ? error.message
-                : String(error)
-            }`,
-            8000
-          );
-        }
-      }
-
-      if (
-        options.revealOutputAfterGenerate &&
-        result.files[0]
-      ) {
-        try {
-          const revealResult = await revealGeneratedFile(
-            this.app,
-            result.files[0]
-          );
-          completedActions.push(
-            revealResult === "revealed"
-              ? "已定位生成结果"
-              : "已打开首图"
-          );
-        } catch (error) {
-          console.warn(
-            "[Text to Card] Reveal output failed",
-            error
-          );
-        }
-      }
-
-      new Notice(
-        [
-          `生成完成：${result.files.length} 张图片`,
-          result.outputFolder,
-          completedActions.join("，")
-        ]
-          .filter(Boolean)
-          .join("\n"),
-        8000
+      await this.completeGeneration(
+        result,
+        file,
+        options,
+        context
       );
     } catch (error) {
       console.error("[Text to Card] Generation failed", error);
@@ -610,6 +635,91 @@ export default class XhsTextCardPlugin extends Plugin {
       this.isGenerating = false;
     }
   }
+
+  private async completeGeneration(
+    result: CardGenerationResult,
+    file: TFile,
+    options: CardGenerationOptions,
+    context: GenerationContext
+  ): Promise<void> {
+    const completedActions: string[] = [];
+
+    if (options.insertLinksAfterGenerate) {
+      if (context.editor && context.insertionPosition) {
+        insertGeneratedImageLinks(
+          context.editor,
+          context.insertionPosition,
+          result.files
+        );
+      } else {
+        await appendGeneratedImageLinks(
+          this.app,
+          file,
+          result.files
+        );
+      }
+      completedActions.push("已插入图片链接");
+    }
+
+    if (
+      options.copyFirstImageAfterGenerate &&
+      result.files[0]
+    ) {
+      try {
+        await copyVaultImageToClipboard(
+          this.app,
+          result.files[0]
+        );
+        completedActions.push("首图已复制");
+      } catch (error) {
+        console.warn(
+          "[Text to Card] Copy image failed",
+          error
+        );
+        new Notice(
+          `图片已生成，但复制首图失败：${
+            error instanceof Error
+              ? error.message
+              : String(error)
+          }`,
+          8000
+        );
+      }
+    }
+
+    if (
+      options.revealOutputAfterGenerate &&
+      result.files[0]
+    ) {
+      try {
+        const revealResult = await revealGeneratedFile(
+          this.app,
+          result.files[0]
+        );
+        completedActions.push(
+          revealResult === "revealed"
+            ? "已定位生成结果"
+            : "已打开首图"
+        );
+      } catch (error) {
+        console.warn(
+          "[Text to Card] Reveal output failed",
+          error
+        );
+      }
+    }
+
+    new Notice(
+      [
+        `生成完成：${result.files.length} 张图片`,
+        result.outputFolder,
+        completedActions.join("，")
+      ]
+        .filter(Boolean)
+        .join("\n"),
+      8000
+    );
+  }
 }
 
 interface GenerationContext {
@@ -624,16 +734,6 @@ function getDocumentEnd(editor: Editor): EditorPosition {
     line,
     ch: editor.getLine(line).length
   };
-}
-
-function updateRecentTemplates(
-  recent: string[],
-  templateId: string
-): string[] {
-  return [
-    templateId,
-    ...recent.filter((id) => id !== templateId)
-  ].slice(0, 5);
 }
 
 function isTemplateId(

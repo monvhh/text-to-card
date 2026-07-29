@@ -3,13 +3,15 @@ import {
   PluginSettingTab,
   Setting,
   type App,
-  type SettingDefinitionItem
+  type SettingDefinitionItem,
+  type TextComponent
 } from "obsidian";
 import type XhsTextCardPlugin from "../main";
 import type {
   ExportFormat
 } from "../settings";
 import {
+  getTemplate,
   getTemplateName,
   TEMPLATE_IDS,
   type TemplateId
@@ -20,6 +22,18 @@ import {
   mergeCustomTemplates,
   parseCustomTemplates
 } from "../utils/custom-templates";
+import {
+  getPageRatioLabel,
+  PAGE_RATIOS,
+  type PageRatio
+} from "../utils/page-ratio";
+import {
+  CUSTOM_FONT_PRESET_ID,
+  findFontPresetByValue,
+  FONT_PRESETS
+} from "../utils/font-presets";
+import { ImageFileSuggestModal } from "./image-file-suggest-modal";
+import { SHOW_CUSTOM_TEMPLATES } from "../feature-flags";
 
 export class XhsTextCardSettingTab extends PluginSettingTab {
   constructor(
@@ -36,6 +50,7 @@ export class XhsTextCardSettingTab extends PluginSettingTab {
         aliases: [
           "默认模板",
           "图片格式",
+          "页面比例",
           "输出目录",
           "封面",
           "签名",
@@ -44,9 +59,7 @@ export class XhsTextCardSettingTab extends PluginSettingTab {
           "Logo",
           "页码",
           "文件名标题",
-          "品牌预设",
-          "自定义模板",
-          "模板收藏"
+          "品牌预设"
         ],
         render: (setting) => {
           setting.settingEl.empty();
@@ -77,21 +90,29 @@ export class XhsTextCardSettingTab extends PluginSettingTab {
           );
         }
 
-        for (const custom of this.plugin.settings.customTemplates) {
-          dropdown.addOption(
-            `custom:${custom.id}`,
-            `自定义 · ${custom.name}`
-          );
+        if (SHOW_CUSTOM_TEMPLATES) {
+          for (const custom of this.plugin.settings.customTemplates) {
+            dropdown.addOption(
+              `custom:${custom.id}`,
+              `自定义 · ${custom.name}`
+            );
+          }
         }
 
         dropdown
-          .setValue(this.plugin.settings.templateSelection)
+          .setValue(
+            SHOW_CUSTOM_TEMPLATES
+              ? this.plugin.settings.templateSelection
+              : this.plugin.settings.templateId
+          )
           .onChange(async (value) => {
             this.plugin.settings.templateSelection = value;
             const custom =
-              this.plugin.settings.customTemplates.find(
-                (item) => `custom:${item.id}` === value
-              );
+              SHOW_CUSTOM_TEMPLATES
+                ? this.plugin.settings.customTemplates.find(
+                    (item) => `custom:${item.id}` === value
+                  )
+                : undefined;
             this.plugin.settings.templateId = custom
               ? custom.baseTemplateId
               : (value as TemplateId);
@@ -100,6 +121,11 @@ export class XhsTextCardSettingTab extends PluginSettingTab {
               applyCustomTemplate(
                 this.plugin.settings,
                 custom
+              );
+            } else {
+              applyBuiltInTemplate(
+                this.plugin.settings,
+                this.plugin.settings.templateId
               );
             }
             await this.plugin.saveSettings();
@@ -116,6 +142,26 @@ export class XhsTextCardSettingTab extends PluginSettingTab {
           .onChange(async (value) => {
             this.plugin.settings.exportFormat =
               value as ExportFormat;
+            await this.plugin.saveSettings();
+          });
+      });
+
+    new Setting(containerEl)
+      .setName("默认页面比例")
+      .setDesc("切换比例后会按新的画布高度重新分页")
+      .addDropdown((dropdown) => {
+        for (const ratio of PAGE_RATIOS) {
+          dropdown.addOption(
+            ratio,
+            getPageRatioLabel(ratio)
+          );
+        }
+
+        dropdown
+          .setValue(this.plugin.settings.pageRatio)
+          .onChange(async (value) => {
+            this.plugin.settings.pageRatio =
+              value as PageRatio;
             await this.plugin.saveSettings();
           });
       });
@@ -155,10 +201,12 @@ export class XhsTextCardSettingTab extends PluginSettingTab {
           });
       });
 
+    let coverImageText: TextComponent | undefined;
     new Setting(containerEl)
       .setName("默认封面图片路径")
-      .setDesc("Vault 内图片路径，留空使用模板封面")
+      .setDesc("从 Vault 选择图片；留空使用模板封面")
       .addText((text) => {
+        coverImageText = text;
         text
           .setPlaceholder("Assets/cover.jpg")
           .setValue(this.plugin.settings.coverImagePath)
@@ -166,57 +214,214 @@ export class XhsTextCardSettingTab extends PluginSettingTab {
             this.plugin.settings.coverImagePath = value.trim();
             await this.plugin.saveSettings();
           });
-      });
-
-    new Setting(containerEl)
-      .setName("默认签名")
-      .setDesc("留空则不显示")
-      .addText((text) => {
-        text
-          .setPlaceholder("@你的账号")
-          .setValue(this.plugin.settings.signatureText)
-          .onChange(async (value) => {
-            this.plugin.settings.signatureText = value;
+      })
+      .addButton((button) => {
+        button
+          .setButtonText("选择图片")
+          .onClick(() => {
+            new ImageFileSuggestModal(
+              this.app,
+              (file) => {
+                this.plugin.settings.coverImagePath =
+                  file.path;
+                coverImageText?.setValue(file.path);
+                void this.plugin.saveSettings();
+              }
+            ).open();
+          });
+      })
+      .addExtraButton((button) => {
+        button
+          .setIcon("x")
+          .setTooltip("清除封面图片")
+          .onClick(async () => {
+            this.plugin.settings.coverImagePath = "";
+            coverImageText?.setValue("");
             await this.plugin.saveSettings();
           });
       });
 
     new Setting(containerEl)
-      .setName("默认水印文字")
-      .setDesc("留空则不显示水印")
-      .addText((text) => {
-        text
-          .setPlaceholder("请勿搬运")
-          .setValue(this.plugin.settings.watermarkText)
+      .setName("将 Obsidian 文章标题加入图片")
+      .setDesc(
+        "开启：把当前文件名作为一级标题加入生成内容；关闭：仅生成文档原内容。不会修改原笔记"
+      )
+      .addToggle((toggle) => {
+        toggle
+          .setValue(this.plugin.settings.useFileNameAsTitle)
           .onChange(async (value) => {
-            this.plugin.settings.watermarkText = value;
+            this.plugin.settings.useFileNameAsTitle = value;
             await this.plugin.saveSettings();
           });
       });
 
     new Setting(containerEl)
+      .setName("默认排版与颜色")
+      .setHeading();
+
+    new Setting(containerEl)
+      .setName("默认正文字号")
+      .setDesc(`${this.plugin.settings.fontSize}px`)
+      .addSlider((slider) => {
+        slider
+          .setLimits(13, 24, 1)
+          .setValue(this.plugin.settings.fontSize)
+          .onChange(async (value) => {
+            this.plugin.settings.fontSize = value;
+            await this.plugin.saveSettings();
+          });
+      });
+
+    new Setting(containerEl)
+      .setName("默认行高")
+      .setDesc(this.plugin.settings.lineHeight.toFixed(1))
+      .addSlider((slider) => {
+        slider
+          .setLimits(1.2, 2.4, 0.1)
+          .setValue(this.plugin.settings.lineHeight)
+          .onChange(async (value) => {
+            this.plugin.settings.lineHeight = value;
+            await this.plugin.saveSettings();
+          });
+      });
+
+    new Setting(containerEl)
+      .setName("默认字间距")
+      .setDesc(`${this.plugin.settings.letterSpacing.toFixed(1)}px`)
+      .addSlider((slider) => {
+        slider
+          .setLimits(0, 2, 0.1)
+          .setValue(this.plugin.settings.letterSpacing)
+          .onChange(async (value) => {
+            this.plugin.settings.letterSpacing = value;
+            await this.plugin.saveSettings();
+          });
+      });
+
+    new Setting(containerEl)
+      .setName("默认内容边距")
+      .setDesc(`${this.plugin.settings.textPadding}px`)
+      .addSlider((slider) => {
+        slider
+          .setLimits(24, 72, 1)
+          .setValue(this.plugin.settings.textPadding)
+          .onChange(async (value) => {
+            this.plugin.settings.textPadding = value;
+            await this.plugin.saveSettings();
+          });
+      });
+
+    new Setting(containerEl)
+      .setName("默认背景色")
+      .setDesc(
+        `由当前模板固定：${getFixedTemplateBackground(
+          this.plugin.settings.templateId
+        )}，不跟随 Obsidian 主题`
+      );
+
+    new Setting(containerEl)
+      .setName("默认文字色")
+      .addColorPicker((picker) => {
+        picker
+          .setValue(this.plugin.settings.textColor)
+          .onChange(async (value) => {
+            this.plugin.settings.textColor = value;
+            await this.plugin.saveSettings();
+          });
+      });
+
+    new Setting(containerEl)
+      .setName("默认强调色")
+      .addColorPicker((picker) => {
+        picker
+          .setValue(this.plugin.settings.accentColor)
+          .onChange(async (value) => {
+            this.plugin.settings.accentColor = value;
+            await this.plugin.saveSettings();
+          });
+      });
+
+    let fontFamilyText: TextComponent | undefined;
+    const fontSetting = new Setting(containerEl)
       .setName("默认字体")
-      .setDesc("使用系统字体族名称，inherit 表示跟随模板")
-      .addText((text) => {
-        text
-          .setPlaceholder("inherit")
-          .setValue(this.plugin.settings.fontFamily)
-          .onChange(async (value) => {
-            this.plugin.settings.fontFamily =
-              value.trim() || "inherit";
-            await this.plugin.saveSettings();
-          });
-      });
+      .setDesc("选择预设字体，或在右侧输入自定义字体族");
 
+    fontSetting.addDropdown((dropdown) => {
+      for (const preset of FONT_PRESETS) {
+        dropdown.addOption(preset.id, preset.name);
+      }
+      dropdown.addOption(
+        CUSTOM_FONT_PRESET_ID,
+        "自定义字体"
+      );
+      dropdown
+        .setValue(
+          findFontPresetByValue(
+            this.plugin.settings.fontFamily
+          )?.id ?? CUSTOM_FONT_PRESET_ID
+        )
+        .onChange(async (value) => {
+          const preset = FONT_PRESETS.find(
+            (item) => item.id === value
+          );
+
+          if (!preset) {
+            return;
+          }
+
+          this.plugin.settings.fontFamily = preset.value;
+          fontFamilyText?.setValue(preset.value);
+          await this.plugin.saveSettings();
+        });
+    });
+
+    fontSetting.addText((text) => {
+      fontFamilyText = text;
+      text
+        .setPlaceholder("例如：PingFang SC, sans-serif")
+        .setValue(this.plugin.settings.fontFamily)
+        .onChange(async (value) => {
+          this.plugin.settings.fontFamily =
+            value.trim() || "inherit";
+          await this.plugin.saveSettings();
+        });
+    });
+
+    let logoPathText: TextComponent | undefined;
     new Setting(containerEl)
       .setName("默认 Logo 路径")
-      .setDesc("填写 Vault 内的图片路径")
+      .setDesc("从 Vault 选择 Logo 图片")
       .addText((text) => {
+        logoPathText = text;
         text
           .setPlaceholder("Assets/logo.png")
           .setValue(this.plugin.settings.logoPath)
           .onChange(async (value) => {
             this.plugin.settings.logoPath = value.trim();
+            await this.plugin.saveSettings();
+          });
+      })
+      .addButton((button) => {
+        button
+          .setButtonText("选择图片")
+          .onClick(() => {
+            new ImageFileSuggestModal(
+              this.app,
+              (file) => {
+                this.plugin.settings.logoPath = file.path;
+                logoPathText?.setValue(file.path);
+                void this.plugin.saveSettings();
+              }
+            ).open();
+          });
+      })
+      .addExtraButton((button) => {
+        button
+          .setIcon("x")
+          .setTooltip("清除 Logo")
+          .onClick(async () => {
+            this.plugin.settings.logoPath = "";
+            logoPathText?.setValue("");
             await this.plugin.saveSettings();
           });
       });
@@ -309,21 +514,10 @@ export class XhsTextCardSettingTab extends PluginSettingTab {
           });
       });
 
-    new Setting(containerEl)
-      .setName("默认使用文件名作为文章标题")
-      .setDesc("生成时在正文最前添加一级标题，不修改原笔记")
-      .addToggle((toggle) => {
-        toggle
-          .setValue(this.plugin.settings.useFileNameAsTitle)
-          .onChange(async (value) => {
-            this.plugin.settings.useFileNameAsTitle = value;
-            await this.plugin.saveSettings();
-          });
-      });
-
     this.renderBrandPresets(containerEl);
-    this.renderCustomTemplates(containerEl);
-    this.renderFavorites(containerEl);
+    if (SHOW_CUSTOM_TEMPLATES) {
+      this.renderCustomTemplates(containerEl);
+    }
   }
 
   private refreshSettings(): void {
@@ -341,6 +535,32 @@ export class XhsTextCardSettingTab extends PluginSettingTab {
       .setName("品牌预设")
       .setHeading();
     let presetName = "";
+
+    new Setting(containerEl)
+      .setName("品牌签名")
+      .setDesc("应用于生成卡片；留空则不显示")
+      .addText((text) => {
+        text
+          .setPlaceholder("@你的账号")
+          .setValue(this.plugin.settings.signatureText)
+          .onChange(async (value) => {
+            this.plugin.settings.signatureText = value;
+            await this.plugin.saveSettings();
+          });
+      });
+
+    new Setting(containerEl)
+      .setName("品牌水印")
+      .setDesc("应用于生成卡片；留空则不显示")
+      .addText((text) => {
+        text
+          .setPlaceholder("请勿搬运")
+          .setValue(this.plugin.settings.watermarkText)
+          .onChange(async (value) => {
+            this.plugin.settings.watermarkText = value;
+            await this.plugin.saveSettings();
+          });
+      });
 
     new Setting(containerEl)
       .setName("保存当前品牌设置")
@@ -532,46 +752,60 @@ export class XhsTextCardSettingTab extends PluginSettingTab {
     }
   }
 
-  private renderFavorites(containerEl: HTMLElement): void {
-    new Setting(containerEl)
-      .setName("模板收藏与最近使用")
-      .setHeading();
-    let selected: TemplateId = this.plugin.settings.templateId;
-
-    new Setting(containerEl)
-      .setName("收藏模板")
-      .setDesc(
-        this.plugin.settings.favoriteTemplateIds.length
-          ? `已收藏：${this.plugin.settings.favoriteTemplateIds
-              .map((id) => getTemplateName(id as TemplateId))
-              .join("、")}`
-          : "尚未收藏模板"
-      )
-      .addDropdown((dropdown) => {
-        for (const id of TEMPLATE_IDS) {
-          dropdown.addOption(id, getTemplateName(id));
-        }
-        dropdown.setValue(selected).onChange((value) => {
-          selected = value as TemplateId;
-        });
-      })
-      .addButton((button) => {
-        button.setButtonText("切换收藏").onClick(async () => {
-          const favorites =
-            this.plugin.settings.favoriteTemplateIds;
-          this.plugin.settings.favoriteTemplateIds =
-            favorites.includes(selected)
-              ? favorites.filter((id) => id !== selected)
-              : [...favorites, selected];
-          await this.plugin.saveSettings();
-          this.refreshSettings();
-        });
-      });
-  }
 }
 
 function createId(prefix: string): string {
   return `${prefix}-${Date.now().toString(36)}-${Math.random()
     .toString(36)
     .slice(2, 7)}`;
+}
+
+function applyBuiltInTemplate(
+  settings: XhsTextCardPlugin["settings"],
+  templateId: TemplateId
+): void {
+  const config = getTemplate(templateId).config;
+
+  settings.fontSize = readNumber(config.fontSize, 18);
+  settings.lineHeight = readNumber(config.lineHeight, 1.7);
+  settings.letterSpacing = readNumber(
+    config.letterSpacing,
+    0.3
+  );
+  settings.textPadding = readNumber(config.textPadding, 45);
+  settings.bgColor = readColor(config.bgColor, "#ffffff");
+  settings.textColor = readColor(
+    config.textColor,
+    "#1a1a1a"
+  );
+  settings.accentColor = readColor(
+    config.accentColor,
+    "#8c3a3a"
+  );
+  settings.fontFamily =
+    typeof config.fontFamily === "string"
+      ? config.fontFamily
+      : "inherit";
+  settings.showPageNumber = config.showPageNumber !== false;
+}
+
+function readNumber(value: unknown, fallback: number): number {
+  return typeof value === "number" && Number.isFinite(value)
+    ? value
+    : fallback;
+}
+
+function readColor(value: unknown, fallback: string): string {
+  return typeof value === "string" &&
+    /^#[0-9a-f]{6}$/i.test(value)
+    ? value
+    : fallback;
+}
+
+function getFixedTemplateBackground(
+  templateId: TemplateId
+): string {
+  const value = getTemplate(templateId).config.bgColor;
+
+  return typeof value === "string" ? value : "#ffffff";
 }

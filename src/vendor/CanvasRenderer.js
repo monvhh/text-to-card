@@ -706,20 +706,22 @@ class CanvasRenderer {
             ctx.textAlign = 'center';
             ctx.fillText(sigText, width / 2, pillY + pillHeight / 2 + 5);
         } else if (sigStyle === 'elegant-serif') {
-            ctx.font = `italic 600 15px serif`;
-            const textWidth = ctx.measureText(sigText).width;
-            const lineWidth = 40, gap = 12;
-            const startX = (width - (textWidth + (lineWidth + gap) * 2)) / 2;
+            ctx.font = `400 14px ${fontFamily}`;
             const y = height - 35 - bottomOffset;
-            ctx.strokeStyle = sigColor;
-            ctx.globalAlpha = 0.4;
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(startX, y); ctx.lineTo(startX + lineWidth, y);
-            ctx.moveTo(width - startX - lineWidth, y); ctx.lineTo(width - startX, y);
-            ctx.stroke();
-            ctx.fillStyle = sigColor; ctx.globalAlpha = 1; ctx.textAlign = 'center';
-            ctx.fillText(sigText, width / 2, y + 6);
+            ctx.fillStyle = sigColor;
+            ctx.globalAlpha = 0.7;
+            ctx.textAlign = 'left';
+
+            const characters = Array.from(sigText);
+            const characterSpacing = 3;
+            const characterWidths = characters.map((character) => ctx.measureText(character).width);
+            const textWidth = characterWidths.reduce((sum, characterWidth) => sum + characterWidth, 0)
+                + Math.max(0, characters.length - 1) * characterSpacing;
+            let characterX = (width - textWidth) / 2;
+            characters.forEach((character, index) => {
+                ctx.fillText(character, characterX, y);
+                characterX += characterWidths[index] + characterSpacing;
+            });
         } else if (sigStyle === 'glass-minimal') {
             ctx.font = `600 13px ${fontFamily}`;
             const boxWidth = ctx.measureText(sigText).width + 30;

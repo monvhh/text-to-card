@@ -2,7 +2,8 @@ import {
   Modal,
   Notice,
   Setting,
-  type App
+  type App,
+  type TextComponent
 } from "obsidian";
 import type {
   BrandPreset,
@@ -17,13 +18,23 @@ import {
   type TemplateId
 } from "../templates";
 import type { CardGenerationOptions } from "../services/card-generator";
+import { SHOW_CUSTOM_TEMPLATES } from "../feature-flags";
+import {
+  getPageRatioLabel,
+  PAGE_RATIOS,
+  type PageRatio
+} from "../utils/page-ratio";
+import {
+  CUSTOM_FONT_PRESET_ID,
+  findFontPresetByValue,
+  FONT_PRESETS
+} from "../utils/font-presets";
+import { ImageFileSuggestModal } from "./image-file-suggest-modal";
 
 export class GenerateCardsModal extends Modal {
   private values: CardGenerationOptions;
   private readonly brandPresets: BrandPreset[];
   private readonly customTemplates: CustomTemplate[];
-  private readonly favoriteTemplateIds: string[];
-  private readonly recentTemplateIds: string[];
 
   constructor(
     app: App,
@@ -31,17 +42,17 @@ export class GenerateCardsModal extends Modal {
     coverTitle: string,
     private readonly onGenerate: (
       options: CardGenerationOptions
-    ) => Promise<void>
+    ) => Promise<void>,
+    initialOptions?: CardGenerationOptions
   ) {
     super(app);
     this.values = {
       ...settings,
-      coverTitle
+      coverTitle,
+      ...(initialOptions ?? {})
     };
     this.brandPresets = settings.brandPresets;
     this.customTemplates = settings.customTemplates;
-    this.favoriteTemplateIds = settings.favoriteTemplateIds;
-    this.recentTemplateIds = settings.recentTemplateIds;
 
     if (!this.values.templateSelection) {
       this.values.templateSelection = this.values.templateId;
@@ -50,7 +61,7 @@ export class GenerateCardsModal extends Modal {
 
   onOpen(): void {
     this.modalEl.addClass("xhs-text-card-modal");
-    this.titleEl.setText("生成小红书卡片");
+    this.titleEl.setText("Preview cards");
     this.renderContent();
   }
 
@@ -61,31 +72,35 @@ export class GenerateCardsModal extends Modal {
       .setName("模板")
       .setDesc("选择卡片视觉样式")
       .addDropdown((dropdown) => {
-        for (const templateId of this.orderedTemplateIds()) {
-          const favorite =
-            this.favoriteTemplateIds.includes(templateId);
-          const recent =
-            this.recentTemplateIds.includes(templateId);
+        for (const templateId of TEMPLATE_IDS) {
           dropdown.addOption(
             templateId,
-            `${favorite ? "★ " : recent ? "最近 · " : ""}${getTemplateName(templateId)}`
+            getTemplateName(templateId)
           );
         }
 
-        for (const custom of this.customTemplates) {
-          dropdown.addOption(
-            `custom:${custom.id}`,
-            `自定义 · ${custom.name}`
-          );
+        if (SHOW_CUSTOM_TEMPLATES) {
+          for (const custom of this.customTemplates) {
+            dropdown.addOption(
+              `custom:${custom.id}`,
+              `自定义 · ${custom.name}`
+            );
+          }
         }
 
         dropdown
-          .setValue(this.values.templateSelection)
+          .setValue(
+            SHOW_CUSTOM_TEMPLATES
+              ? this.values.templateSelection
+              : this.values.templateId
+          )
           .onChange((value) => {
             this.values.templateSelection = value;
-            const custom = this.customTemplates.find(
-              (item) => `custom:${item.id}` === value
-            );
+            const custom = SHOW_CUSTOM_TEMPLATES
+              ? this.customTemplates.find(
+                  (item) => `custom:${item.id}` === value
+                )
+              : undefined;
             const templateId = custom
               ? custom.baseTemplateId
               : (value as TemplateId);
@@ -121,20 +136,6 @@ export class GenerateCardsModal extends Modal {
       });
 
     new Setting(this.contentEl)
-      .setName("图片格式")
-      .setDesc("PNG 无损；JPEG 文件更小")
-      .addDropdown((dropdown) => {
-        dropdown
-          .addOption("png", "PNG")
-          .addOption("jpeg", "JPEG")
-          .setValue(this.values.exportFormat)
-          .onChange((value) => {
-            this.values.exportFormat =
-              value as ExportFormat;
-          });
-      });
-
-    new Setting(this.contentEl)
       .setName("生成封面")
       .setDesc("在正文卡片前增加一张封面")
       .addToggle((toggle) => {
@@ -156,273 +157,14 @@ export class GenerateCardsModal extends Modal {
           });
       });
 
-    new Setting(this.contentEl)
-      .setName("自定义封面图片")
-      .setDesc("填写 Vault 内图片路径；留空使用模板封面")
-      .addText((text) => {
-        text
-          .setPlaceholder("Assets/cover.jpg")
-          .setValue(this.values.coverImagePath)
-          .onChange((value) => {
-            this.values.coverImagePath = value.trim();
-          });
-      });
-
-    new Setting(this.contentEl)
-      .setName("签名")
-      .setDesc("留空则不显示签名")
-      .addText((text) => {
-        text
-          .setPlaceholder("例如：@你的账号")
-          .setValue(this.values.signatureText)
-          .onChange((value) => {
-            this.values.signatureText = value;
-          });
-      });
-
-    this.contentEl.createEl("h3", {
-      text: "排版与颜色",
-      cls: "xhs-text-card-section-title"
-    });
-
-    new Setting(this.contentEl)
-      .setName("正文字号")
-      .setDesc(`${this.values.fontSize}px`)
-      .addSlider((slider) => {
-        slider
-          .setLimits(13, 24, 1)
-          .setValue(this.values.fontSize)
-          .onChange((value) => {
-            this.values.fontSize = value;
-          });
-      });
-
-    new Setting(this.contentEl)
-      .setName("行高")
-      .setDesc(this.values.lineHeight.toFixed(1))
-      .addSlider((slider) => {
-        slider
-          .setLimits(1.2, 2.4, 0.1)
-          .setValue(this.values.lineHeight)
-          .onChange((value) => {
-            this.values.lineHeight = value;
-          });
-      });
-
-    new Setting(this.contentEl)
-      .setName("字间距")
-      .setDesc(`${this.values.letterSpacing.toFixed(1)}px`)
-      .addSlider((slider) => {
-        slider
-          .setLimits(0, 2, 0.1)
-          .setValue(this.values.letterSpacing)
-          .onChange((value) => {
-            this.values.letterSpacing = value;
-          });
-      });
-
-    new Setting(this.contentEl)
-      .setName("内容边距")
-      .setDesc(`${this.values.textPadding}px`)
-      .addSlider((slider) => {
-        slider
-          .setLimits(24, 72, 1)
-          .setValue(this.values.textPadding)
-          .onChange((value) => {
-            this.values.textPadding = value;
-          });
-      });
-
-    new Setting(this.contentEl)
-      .setName("背景色")
-      .addColorPicker((picker) => {
-        picker
-          .setValue(this.values.bgColor)
-          .onChange((value) => {
-            this.values.bgColor = value;
-          });
-      });
-
-    new Setting(this.contentEl)
-      .setName("文字色")
-      .addColorPicker((picker) => {
-        picker
-          .setValue(this.values.textColor)
-          .onChange((value) => {
-            this.values.textColor = value;
-          });
-      });
-
-    new Setting(this.contentEl)
-      .setName("强调色")
-      .addColorPicker((picker) => {
-        picker
-          .setValue(this.values.accentColor)
-          .onChange((value) => {
-            this.values.accentColor = value;
-          });
-      });
-
-    new Setting(this.contentEl)
-      .setName("字体")
-      .setDesc("填写系统字体族，例如 PingFang SC")
-      .addText((text) => {
-        text
-          .setPlaceholder("inherit")
-          .setValue(this.values.fontFamily)
-          .onChange((value) => {
-            this.values.fontFamily = value.trim() || "inherit";
-          });
-      });
-
-    new Setting(this.contentEl)
-      .setName("Logo 路径")
-      .setDesc("Vault 内图片路径，留空则隐藏")
-      .addText((text) => {
-        text
-          .setPlaceholder("Assets/logo.png")
-          .setValue(this.values.logoPath)
-          .onChange((value) => {
-            this.values.logoPath = value;
-          });
-      });
-
-    new Setting(this.contentEl)
-      .setName("水印文字")
-      .setDesc("留空则不显示水印")
-      .addText((text) => {
-        text
-          .setPlaceholder("例如：请勿搬运")
-          .setValue(this.values.watermarkText)
-          .onChange((value) => {
-            this.values.watermarkText = value;
-          });
-      });
-
-    new Setting(this.contentEl)
-      .setName("显示页码")
-      .addToggle((toggle) => {
-        toggle
-          .setValue(this.values.showPageNumber)
-          .onChange((value) => {
-            this.values.showPageNumber = value;
-          });
-      });
-
-    new Setting(this.contentEl)
-      .setName("最大页数")
-      .setDesc("0 表示不限制；超过限制时停止导出")
-      .addText((text) => {
-        text.inputEl.type = "number";
-        text.inputEl.min = "0";
-        text.inputEl.max = "50";
-        text.inputEl.step = "1";
-        text
-          .setValue(String(this.values.maxPages))
-          .onChange((value) => {
-            this.values.maxPages = clampInteger(
-              value,
-              0,
-              50
-            );
-          });
-      });
-
-    new Setting(this.contentEl)
-      .setName("输出目录")
-      .setDesc("每次生成会在该目录下创建独立文件夹")
-      .addText((text) => {
-        text
-          .setPlaceholder("XHS-Cards")
-          .setValue(this.values.outputFolder)
-          .onChange((value) => {
-            this.values.outputFolder = value;
-          });
-      });
-
-    new Setting(this.contentEl)
-      .setName("更新固定输出")
-      .setDesc("使用稳定目录并覆盖同名图片，删除多余旧页")
-      .addToggle((toggle) => {
-        toggle
-          .setValue(this.values.updateExisting)
-          .onChange((value) => {
-            this.values.updateExisting = value;
-          });
-      });
-
-    new Setting(this.contentEl)
-      .setName("移除 YAML 属性")
-      .setDesc("生成时忽略笔记开头的 frontmatter")
-      .addToggle((toggle) => {
-        toggle
-          .setValue(this.values.stripFrontmatter)
-          .onChange((value) => {
-            this.values.stripFrontmatter = value;
-          });
-      });
-
-    new Setting(this.contentEl)
-      .setName("使用文件名作为文章标题")
-      .setDesc("在正文最前添加一级标题，不修改原笔记")
-      .addToggle((toggle) => {
-        toggle
-          .setValue(this.values.useFileNameAsTitle)
-          .onChange((value) => {
-            this.values.useFileNameAsTitle = value;
-          });
-      });
-
-    this.contentEl.createEl("h3", {
-      text: "生成后操作",
-      cls: "xhs-text-card-section-title"
-    });
-
-    new Setting(this.contentEl)
-      .setName("插入图片链接")
-      .setDesc("将生成的图片嵌入到当前笔记")
-      .addToggle((toggle) => {
-        toggle
-          .setValue(this.values.insertLinksAfterGenerate)
-          .onChange((value) => {
-            this.values.insertLinksAfterGenerate = value;
-          });
-      });
-
-    new Setting(this.contentEl)
-      .setName("复制首张图片")
-      .setDesc("生成后将第一张图片复制到系统剪贴板")
-      .addToggle((toggle) => {
-        toggle
-          .setValue(this.values.copyFirstImageAfterGenerate)
-          .onChange((value) => {
-            this.values.copyFirstImageAfterGenerate = value;
-          });
-      });
-
-    new Setting(this.contentEl)
-      .setName("定位生成结果")
-      .setDesc("在文件管理器中定位首图，必要时直接打开")
-      .addToggle((toggle) => {
-        toggle
-          .setValue(this.values.revealOutputAfterGenerate)
-          .onChange((value) => {
-            this.values.revealOutputAfterGenerate = value;
-          });
-      });
+    this.renderDefaultSettings();
 
     const actionSetting = new Setting(this.contentEl);
     actionSetting.settingEl.addClass("xhs-text-card-actions");
 
-    actionSetting
-      .addButton((button) => {
+    actionSetting.addButton((button) => {
         button
-          .setButtonText("取消")
-          .onClick(() => this.close());
-      })
-      .addButton((button) => {
-        button
-          .setButtonText("生成图片")
+          .setButtonText("应用设置并刷新预览")
           .setCta()
           .onClick(() => {
             if (!this.values.outputFolder.trim()) {
@@ -435,6 +177,335 @@ export class GenerateCardsModal extends Modal {
             void this.onGenerate(options);
           });
       });
+  }
+
+  private renderDefaultSettings(): void {
+    const details = this.contentEl.createEl("details", {
+      cls: "xhs-default-settings"
+    });
+    details.open = false;
+
+    details.createEl("summary", {
+      text: "默认设置（展开修改）"
+    });
+    details.createEl("p", {
+      text: "修改后用于本次预览和保存；没有 YAML 覆盖时，也会保存为后续默认值。",
+      cls: "setting-item-description"
+    });
+
+    const template = getTemplate(this.values.templateId);
+    const fixedBackground =
+      typeof template.config.bgColor === "string"
+        ? template.config.bgColor
+        : "#ffffff";
+    new Setting(details)
+      .setName("页面比例")
+      .setDesc("切换后重新分页")
+      .addDropdown((dropdown) => {
+        for (const ratio of PAGE_RATIOS) {
+          dropdown.addOption(ratio, getPageRatioLabel(ratio));
+        }
+        dropdown
+          .setValue(this.values.pageRatio)
+          .onChange((value) => {
+            this.values.pageRatio = value as PageRatio;
+          });
+      });
+
+    new Setting(details)
+      .setName("图片格式")
+      .addDropdown((dropdown) => {
+        dropdown
+          .addOption("png", "PNG")
+          .addOption("jpeg", "JPEG")
+          .setValue(this.values.exportFormat)
+          .onChange((value) => {
+            this.values.exportFormat = value as ExportFormat;
+          });
+      });
+
+    new Setting(details)
+      .setName("输出目录")
+      .addText((text) => {
+        text
+          .setValue(this.values.outputFolder)
+          .onChange((value) => {
+            this.values.outputFolder = value.trim();
+          });
+      });
+
+    new Setting(details)
+      .setName("输出名称后缀")
+      .setDesc("留空不添加")
+      .addText((text) => {
+        text
+          .setValue(this.values.outputNameSuffix)
+          .onChange((value) => {
+            this.values.outputNameSuffix = value.trim();
+          });
+      });
+
+    addToggleSetting(
+      details,
+      "更新固定输出",
+      "覆盖同名图片并清理多余旧页",
+      this.values.updateExisting,
+      (value) => {
+        this.values.updateExisting = value;
+      }
+    );
+
+    let coverImageText: TextComponent | undefined;
+    new Setting(details)
+      .setName("封面图片")
+      .setDesc("从 Vault 选择；留空使用模板封面")
+      .addText((text) => {
+        coverImageText = text;
+        text
+          .setValue(this.values.coverImagePath)
+          .onChange((value) => {
+            this.values.coverImagePath = value.trim();
+          });
+      })
+      .addButton((button) => {
+        button.setButtonText("选择").onClick(() => {
+          new ImageFileSuggestModal(this.app, (file) => {
+            this.values.coverImagePath = file.path;
+            coverImageText?.setValue(file.path);
+          }).open();
+        });
+      })
+      .addExtraButton((button) => {
+        button
+          .setIcon("x")
+          .setTooltip("清除")
+          .onClick(() => {
+            this.values.coverImagePath = "";
+            coverImageText?.setValue("");
+          });
+      });
+
+    addNumberSetting(
+      details,
+      "正文字号",
+      this.values.fontSize,
+      13,
+      24,
+      1,
+      (value) => {
+        this.values.fontSize = value;
+      }
+    );
+    addNumberSetting(
+      details,
+      "行高",
+      this.values.lineHeight,
+      1.2,
+      2.4,
+      0.1,
+      (value) => {
+        this.values.lineHeight = value;
+      }
+    );
+    addNumberSetting(
+      details,
+      "字间距",
+      this.values.letterSpacing,
+      0,
+      2,
+      0.1,
+      (value) => {
+        this.values.letterSpacing = value;
+      }
+    );
+    addNumberSetting(
+      details,
+      "内容边距",
+      this.values.textPadding,
+      24,
+      72,
+      1,
+      (value) => {
+        this.values.textPadding = value;
+      }
+    );
+
+    new Setting(details)
+      .setName("背景色")
+      .setDesc(`${fixedBackground}（由模板固定）`);
+
+    new Setting(details)
+      .setName("文字色")
+      .addColorPicker((picker) => {
+        picker
+          .setValue(this.values.textColor)
+          .onChange((value) => {
+            this.values.textColor = value;
+          });
+      });
+
+    new Setting(details)
+      .setName("强调色")
+      .addColorPicker((picker) => {
+        picker
+          .setValue(this.values.accentColor)
+          .onChange((value) => {
+            this.values.accentColor = value;
+          });
+      });
+
+    let fontFamilyText: TextComponent | undefined;
+    new Setting(details)
+      .setName("字体")
+      .addDropdown((dropdown) => {
+        for (const preset of FONT_PRESETS) {
+          dropdown.addOption(preset.id, preset.name);
+        }
+        dropdown.addOption(
+          CUSTOM_FONT_PRESET_ID,
+          "自定义字体"
+        );
+        dropdown
+          .setValue(
+            findFontPresetByValue(this.values.fontFamily)?.id ??
+              CUSTOM_FONT_PRESET_ID
+          )
+          .onChange((value) => {
+            const preset = FONT_PRESETS.find(
+              (item) => item.id === value
+            );
+            if (preset) {
+              this.values.fontFamily = preset.value;
+              fontFamilyText?.setValue(preset.value);
+            }
+          });
+      })
+      .addText((text) => {
+        fontFamilyText = text;
+        text
+          .setValue(this.values.fontFamily)
+          .onChange((value) => {
+            this.values.fontFamily =
+              value.trim() || "inherit";
+          });
+      });
+
+    let logoPathText: TextComponent | undefined;
+    new Setting(details)
+      .setName("Logo")
+      .setDesc("从 Vault 选择")
+      .addText((text) => {
+        logoPathText = text;
+        text
+          .setValue(this.values.logoPath)
+          .onChange((value) => {
+            this.values.logoPath = value.trim();
+          });
+      })
+      .addButton((button) => {
+        button.setButtonText("选择").onClick(() => {
+          new ImageFileSuggestModal(this.app, (file) => {
+            this.values.logoPath = file.path;
+            logoPathText?.setValue(file.path);
+          }).open();
+        });
+      })
+      .addExtraButton((button) => {
+        button
+          .setIcon("x")
+          .setTooltip("清除")
+          .onClick(() => {
+            this.values.logoPath = "";
+            logoPathText?.setValue("");
+          });
+      });
+
+    new Setting(details)
+      .setName("品牌签名")
+      .addText((text) => {
+        text
+          .setValue(this.values.signatureText)
+          .onChange((value) => {
+            this.values.signatureText = value;
+          });
+      });
+
+    new Setting(details)
+      .setName("品牌水印")
+      .addText((text) => {
+        text
+          .setValue(this.values.watermarkText)
+          .onChange((value) => {
+            this.values.watermarkText = value;
+          });
+      });
+
+    addToggleSetting(
+      details,
+      "显示页码",
+      "",
+      this.values.showPageNumber,
+      (value) => {
+        this.values.showPageNumber = value;
+      }
+    );
+    addNumberSetting(
+      details,
+      "最大页数",
+      this.values.maxPages,
+      0,
+      50,
+      1,
+      (value) => {
+        this.values.maxPages = value;
+      },
+      "0 表示不限制"
+    );
+    addToggleSetting(
+      details,
+      "移除 YAML 属性",
+      "",
+      this.values.stripFrontmatter,
+      (value) => {
+        this.values.stripFrontmatter = value;
+      }
+    );
+    addToggleSetting(
+      details,
+      "将 Obsidian 文章标题加入图片",
+      "关闭后仅按文档原内容生成",
+      this.values.useFileNameAsTitle,
+      (value) => {
+        this.values.useFileNameAsTitle = value;
+      }
+    );
+    addToggleSetting(
+      details,
+      "插入图片链接",
+      "",
+      this.values.insertLinksAfterGenerate,
+      (value) => {
+        this.values.insertLinksAfterGenerate = value;
+      }
+    );
+    addToggleSetting(
+      details,
+      "复制首张图片",
+      "",
+      this.values.copyFirstImageAfterGenerate,
+      (value) => {
+        this.values.copyFirstImageAfterGenerate = value;
+      }
+    );
+    addToggleSetting(
+      details,
+      "定位生成结果",
+      "",
+      this.values.revealOutputAfterGenerate,
+      (value) => {
+        this.values.revealOutputAfterGenerate = value;
+      }
+    );
   }
 
   private applyTemplateDefaults(
@@ -462,7 +533,6 @@ export class GenerateCardsModal extends Modal {
       config.accentColor,
       "#f44830"
     );
-    this.values.watermarkText = "";
     this.values.showPageNumber =
       config.showPageNumber !== false;
     this.values.fontFamily =
@@ -479,21 +549,6 @@ export class GenerateCardsModal extends Modal {
     this.values.accentColor = preset.accentColor;
     this.values.fontFamily = preset.fontFamily;
     this.values.logoPath = preset.logoPath;
-  }
-
-  private orderedTemplateIds(): TemplateId[] {
-    const rank = (id: string) => {
-      if (this.favoriteTemplateIds.includes(id)) {
-        return 0;
-      }
-
-      const recentIndex = this.recentTemplateIds.indexOf(id);
-      return recentIndex >= 0 ? 1 + recentIndex : 20;
-    };
-
-    return [...TEMPLATE_IDS].sort(
-      (a, b) => rank(a) - rank(b)
-    );
   }
 
   onClose(): void {
@@ -514,16 +569,47 @@ function readColor(value: unknown, fallback: string): string {
     : fallback;
 }
 
-function clampInteger(
-  value: string,
-  min: number,
-  max: number
-): number {
-  const parsed = Number.parseInt(value, 10);
+function addToggleSetting(
+  container: HTMLElement,
+  name: string,
+  description: string,
+  value: boolean,
+  onChange: (value: boolean) => void
+): void {
+  const setting = new Setting(container).setName(name);
 
-  if (!Number.isFinite(parsed)) {
-    return min;
+  if (description) {
+    setting.setDesc(description);
   }
 
-  return Math.min(max, Math.max(min, parsed));
+  setting.addToggle((toggle) => {
+    toggle.setValue(value).onChange(onChange);
+  });
+}
+
+function addNumberSetting(
+  container: HTMLElement,
+  name: string,
+  value: number,
+  min: number,
+  max: number,
+  step: number,
+  onChange: (value: number) => void,
+  description = `${min}–${max}`
+): void {
+  new Setting(container)
+    .setName(name)
+    .setDesc(description)
+    .addText((text) => {
+      text.inputEl.type = "number";
+      text.inputEl.min = String(min);
+      text.inputEl.max = String(max);
+      text.inputEl.step = String(step);
+      text.setValue(String(value)).onChange((raw) => {
+        const parsed = Number(raw);
+        if (Number.isFinite(parsed)) {
+          onChange(Math.min(max, Math.max(min, parsed)));
+        }
+      });
+    });
 }

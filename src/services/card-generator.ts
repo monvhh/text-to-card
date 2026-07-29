@@ -14,11 +14,13 @@ import {
 } from "../templates";
 import { addFileNameTitle } from "../utils/article-title";
 import { prepareMarkdown } from "../utils/markdown";
+import { getPageDimensions } from "../utils/page-ratio";
 
 export interface CardGenerationOptions {
   templateId: TemplateId;
   templateSelection: string;
   exportFormat: ExportFormat;
+  pageRatio: XhsTextCardSettings["pageRatio"];
   outputFolder: string;
   includeCover: boolean;
   coverImagePath: string;
@@ -55,10 +57,10 @@ export interface CardGenerationSession {
   pages: unknown[][];
   config: Record<string, unknown>;
   templateId: TemplateId;
+  width: number;
+  height: number;
 }
 
-const PREVIEW_WIDTH = 500;
-const PREVIEW_HEIGHT = 667;
 const OUTPUT_WIDTH = 1242;
 
 export class CardGenerator {
@@ -101,6 +103,13 @@ export class CardGenerator {
     );
 
     const template = getTemplate(options.templateId);
+    const fixedBackgroundColor =
+      typeof template.config.bgColor === "string"
+        ? template.config.bgColor
+        : "#ffffff";
+    const { width, height } = getPageDimensions(
+      options.pageRatio
+    );
     const logoImage = this.resolveVaultImage(options.logoPath);
     const customCoverImage = this.resolveVaultImage(
       options.coverImagePath
@@ -118,15 +127,20 @@ export class CardGenerator {
       lineHeight: options.lineHeight,
       letterSpacing: options.letterSpacing,
       textPadding: options.textPadding,
-      bgColor: options.bgColor,
+      bgColor: fixedBackgroundColor,
       textColor: options.textColor,
       accentColor: options.accentColor,
       fontFamily: options.fontFamily || "inherit",
       logoImage,
+      logoPosition: "left",
+      logoSize: 30,
+      logoPadding: 24,
       hasWatermark: Boolean(options.watermarkText.trim()),
       watermarkText: options.watermarkText.trim(),
       showPageNumber: options.showPageNumber,
-      showGrid: false
+      showGrid: false,
+      canvasWidth: width,
+      canvasHeight: height
     };
 
     await document.fonts?.ready;
@@ -144,7 +158,9 @@ export class CardGenerator {
     return {
       pages,
       config,
-      templateId: options.templateId
+      templateId: options.templateId,
+      width,
+      height
     };
   }
 
@@ -173,7 +189,7 @@ export class CardGenerator {
     sourceFile: TFile,
     options: CardGenerationOptions
   ): Promise<CardGenerationResult> {
-    const { pages, config } = session;
+    const { pages, config, width, height } = session;
 
     if (
       options.maxPages > 0 &&
@@ -201,9 +217,9 @@ export class CardGenerator {
         totalCount: pages.length,
         config,
         templateId: session.templateId,
-        width: PREVIEW_WIDTH,
-        height: PREVIEW_HEIGHT,
-        scale: OUTPUT_WIDTH / PREVIEW_WIDTH
+        width,
+        height,
+        scale: OUTPUT_WIDTH / width
       });
 
       const blob = await canvasToBlob(
@@ -259,8 +275,8 @@ export class CardGenerator {
       totalCount: session.pages.length,
       config: session.config,
       templateId: session.templateId,
-      width: PREVIEW_WIDTH,
-      height: PREVIEW_HEIGHT,
+      width: session.width,
+      height: session.height,
       scale
     });
   }

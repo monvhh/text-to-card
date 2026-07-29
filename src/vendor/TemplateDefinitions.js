@@ -175,8 +175,8 @@ const TemplateDefinitions = {
         },
         drawTextAreaBackground: (ctx, rect, config) => {
             const marginX = 50, marginY = 60;
-            const paperWidth = PREVIEW_WIDTH - (marginX * 2);
-            const paperHeight = PREVIEW_HEIGHT - (marginY * 2);
+            const paperWidth = (Number(config.canvasWidth) || PREVIEW_WIDTH) - (marginX * 2);
+            const paperHeight = (Number(config.canvasHeight) || PREVIEW_HEIGHT) - (marginY * 2);
 
             ctx.save();
             ctx.shadowColor = 'rgba(0,0,0,0.15)';
@@ -363,7 +363,9 @@ const TemplateDefinitions = {
             return { x: paperX + internalPadding, y: paperY + internalPadding, width: paperW - (internalPadding * 2), height: paperH - (internalPadding * 2) };
         },
         drawTextAreaBackground: (ctx, rect, config) => {
-            const paperX = 15, paperY = 55, paperW = PREVIEW_WIDTH - 30, paperH = PREVIEW_HEIGHT - 110;
+            const paperX = 15, paperY = 55;
+            const paperW = (Number(config.canvasWidth) || PREVIEW_WIDTH) - 30;
+            const paperH = (Number(config.canvasHeight) || PREVIEW_HEIGHT) - 110;
             ctx.save();
             ctx.shadowColor = 'rgba(0,0,0,0.05)'; ctx.shadowBlur = 20; ctx.shadowOffsetY = 5;
             CanvasUtils.drawRoundedRect(ctx, paperX, paperY, paperW, paperH, 12, '#ffffff');
@@ -415,9 +417,11 @@ const TemplateDefinitions = {
         },
         drawTextAreaBackground: (ctx, rect, config) => {
             ctx.save(); ctx.strokeStyle = 'rgba(0,0,0,0.03)'; ctx.lineWidth = 0.5;
-            for(let x = 0; x < PREVIEW_WIDTH; x += 40) {
+            const width = Number(config.canvasWidth) || PREVIEW_WIDTH;
+            const height = Number(config.canvasHeight) || PREVIEW_HEIGHT;
+            for(let x = 0; x < width; x += 40) {
                 if (x < 10) continue;
-                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, PREVIEW_HEIGHT); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke();
             }
             ctx.restore();
         },
@@ -504,7 +508,8 @@ const TemplateDefinitions = {
         },
         drawTextAreaBackground: (ctx, rect, config) => {
             const cardX = 25, cardY = 30, cardBottomMargin = config.hasSignature ? 60 : 35;
-            const cardW = PREVIEW_WIDTH - 50, cardH = PREVIEW_HEIGHT - cardY - cardBottomMargin;
+            const cardW = (Number(config.canvasWidth) || PREVIEW_WIDTH) - 50;
+            const cardH = (Number(config.canvasHeight) || PREVIEW_HEIGHT) - cardY - cardBottomMargin;
             ctx.save(); ctx.shadowColor = 'rgba(0,0,0,0.03)'; ctx.shadowBlur = 40; ctx.shadowOffsetY = 10;
             CanvasUtils.drawRoundedRect(ctx, cardX, cardY, cardW, cardH, 28, 'rgba(255, 255, 255, 0.5)', true, 'rgba(255, 255, 255, 0.4)');
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)'; ctx.lineWidth = 1.5;
@@ -543,7 +548,8 @@ const TemplateDefinitions = {
         },
         drawTextAreaBackground: (ctx, rect, config) => {
             const cardX = 20, cardY = 30, cardBottomMargin = config.hasSignature ? 60 : 35;
-            const cardW = PREVIEW_WIDTH - 40, cardH = PREVIEW_HEIGHT - cardY - cardBottomMargin;
+            const cardW = (Number(config.canvasWidth) || PREVIEW_WIDTH) - 40;
+            const cardH = (Number(config.canvasHeight) || PREVIEW_HEIGHT) - cardY - cardBottomMargin;
             ctx.save();
             CanvasUtils.drawRoundedRect(ctx, cardX, cardY, cardW, cardH, 16, 'rgba(255,255,255,0.02)', true, 'rgba(255,255,255,0.05)');
             ctx.restore();
@@ -585,9 +591,11 @@ const TemplateDefinitions = {
             ctx.restore();
         },
         drawTextAreaBackground: (ctx, rect, config) => {
-            const winX = 15, winW = PREVIEW_WIDTH - 30, winY = 40;
+            const winX = 15;
+            const winW = (Number(config.canvasWidth) || PREVIEW_WIDTH) - 30;
+            const winY = 40;
             const winBottomMargin = config.hasSignature ? 60 : 35;
-            const winH = PREVIEW_HEIGHT - winY - winBottomMargin;
+            const winH = (Number(config.canvasHeight) || PREVIEW_HEIGHT) - winY - winBottomMargin;
             const headerHeight = 30, textColor = config.textColor || '#111827';
             ctx.save();
             ctx.shadowColor = 'rgba(0,0,0,0.08)'; ctx.shadowBlur = 30; ctx.shadowOffsetY = 10;

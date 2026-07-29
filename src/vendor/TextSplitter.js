@@ -37,9 +37,11 @@ class TextSplitter {
      * 计算当前模板允许的最大内容高度和宽度
      */
     calculateLayout() {
+        const width = Number(this.config.canvasWidth) || PREVIEW_WIDTH;
+        const height = Number(this.config.canvasHeight) || PREVIEW_HEIGHT;
         // 核心布局尺寸定义来自于 TemplateDefinitions
         const contentBox = TemplateDefinitions.getContentBox(
-            this.templateId, this.config, PREVIEW_WIDTH, PREVIEW_HEIGHT
+            this.templateId, this.config, width, height
         );
         this.maxHeight = contentBox.height;
         this.contentWidth = contentBox.width;
