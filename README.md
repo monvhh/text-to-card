@@ -1,7 +1,9 @@
 # Text to Card for Obsidian
 
-Convert an Obsidian note or selected Markdown into multi-page 3:4 image cards.
-Pagination and rendering run locally in Canvas, and note content is never uploaded.
+Convert an Obsidian note or selected Markdown into multi-page image cards in
+2:3, 3:4 or 9:16 format. Generate and save with one command, or open the
+preview when you want to adjust the result. Pagination and rendering run
+locally in Canvas, and note content is never uploaded.
 
 ## Features
 
@@ -19,10 +21,22 @@ Pagination and rendering run locally in Canvas, and note content is never upload
 - Optional image-link insertion, first-image clipboard copy and output reveal
 - Responsive layouts for desktop and mobile Obsidian
 
+## Image sizes
+
+| Preset | Ratio | Base canvas | Best for |
+| --- | --- | --- | --- |
+| Xiaohongshu long post | 2:3 | 500 × 750 | Text-heavy cards |
+| Xiaohongshu | 3:4 | 500 × 667 | General image posts |
+| Vertical video | 9:16 | 500 × 889 | Stories and short-video covers |
+
+All three presets are exported at 1242-pixel width. The output height is
+calculated automatically from the selected ratio, and changing the ratio
+repaginates the article.
+
 ## Installation
 
-After the plugin is accepted into the Community directory, install **Text to Card**
-from **Settings → Community plugins → Browse**.
+Install **Text to Card** from
+**Settings → Community plugins → Browse**.
 
 For manual installation, download `main.js`, `manifest.json` and `styles.css` from
 the [latest GitHub release](https://github.com/monvhh/text-to-card/releases/latest).
@@ -85,15 +99,29 @@ are included in this repository.
 
 ## 中文说明
 
-把 Obsidian 笔记或选中的 Markdown 内容转换为 3:4 小红书图文卡片。所有内容
-在本地 Canvas 中完成分页和渲染，不上传笔记。
+把 Obsidian 笔记或选中的 Markdown 内容转换为 2:3、3:4 或 9:16 多页图片
+卡片。既可以用一个命令直接生成并保存，也可以先进入预览调整。所有内容均在
+本地 Canvas 中完成分页和渲染，不上传笔记。
 
-## v1.0 功能
+## 三种图片尺寸
+
+| 场景 | 比例 | 基准画布 | 适合内容 |
+| --- | --- | --- | --- |
+| 小红书长文 | 2:3 | 500 × 750 | 文字较多的长图卡片 |
+| 小红书图文 | 3:4 | 500 × 667 | 常规小红书图文，默认选项 |
+| 短视频竖图 | 9:16 | 500 × 889 | Story、短视频封面和竖屏内容 |
+
+三种尺寸均以 1242 像素宽高清导出，高度根据所选比例自动计算。切换比例后，
+插件会按照新的页面高度重新分页，不会简单拉伸图片。
+
+## 当前功能
 
 - 内置 12 款模板，支持 2:3、3:4、9:16 页面比例
 - 支持 PNG、JPEG 和 1242 像素宽高清输出
 - 插件内 Canvas 预览，可删除不需要的页面
-- 单篇与批量快速生成命令直接保存图片，另有独立预览命令
+- **Make cards** 可绑定快捷键，一次按键直接生成并保存，不打开预览弹框
+- **Preview cards** 用于临时修改参数、检查分页并保存图片
+- **Make cards in batch** 可按文件夹和标签批量直接生成
 - 浏览器开发预览支持实时 Markdown、页级编辑和 ZIP 下载
 - 字号、行高、字间距、边距、文字/强调色、字体、封面、Logo、签名和水印
 - 背景色由模板固定，不读取 Obsidian 明暗主题
@@ -113,7 +141,7 @@ are included in this repository.
 
 ### Community Plugins
 
-审核上架后，可在 Obsidian 的 **设置 → 第三方插件 → 浏览** 中搜索
+可在 Obsidian 的 **设置 → 第三方插件 → 浏览** 中搜索
 **Text to Card** 并安装。
 
 ### 手动安装

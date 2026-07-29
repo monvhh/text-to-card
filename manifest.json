@@ -3,7 +3,7 @@
   "name": "Text to Card",
   "version": "1.0.6",
   "minAppVersion": "1.12.7",
-  "description": "Generate multi-page Xiaohongshu-style image cards from the current note or selection.",
+  "description": "Generate multi-page image cards from Obsidian notes with 2:3, 3:4 and 9:16 layouts, local preview and one-command export.",
   "author": "monvhh",
   "isDesktopOnly": false
 }
