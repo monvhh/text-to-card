@@ -87,7 +87,10 @@ function resolveWikiImages(
         return original;
       }
 
-      return `![](${app.vault.getResourcePath(target)})`;
+      return formatMarkdownImage(
+        "",
+        app.vault.getResourcePath(target)
+      );
     }
   );
 }
@@ -171,13 +174,18 @@ function resolveMarkdownImages(
   sourcePath: string
 ): string {
   return markdown.replace(
-    /!\[([^\]]*)\]\((<)?([^)\s>]+)(>)?(?:\s+["'][^"']*["'])?\)/g,
+    /!\[([^\]]*)\]\(\s*(?:<([^>]+)>|([^)\n]+?))\s*\)/g,
     (
       original,
       alt: string,
-      _openAngle: string | undefined,
-      imagePath: string
+      anglePath: string | undefined,
+      rawPath: string | undefined
     ) => {
+      const imagePath = (
+        anglePath ?? rawPath ?? ""
+      )
+        .replace(/\s+["'][^"']*["']\s*$/, "")
+        .trim();
       if (
         /^(?:https?:|data:|blob:|app:)/i.test(imagePath) ||
         imagePath.startsWith("#")
@@ -195,7 +203,10 @@ function resolveMarkdownImages(
         return original;
       }
 
-      return `![${alt}](${app.vault.getResourcePath(target)})`;
+      return formatMarkdownImage(
+        alt,
+        app.vault.getResourcePath(target)
+      );
     }
   );
 }
@@ -214,4 +225,11 @@ function safeDecodeURIComponent(value: string): string {
   } catch {
     return value;
   }
+}
+
+function formatMarkdownImage(alt: string, source: string): string {
+  const escapedAlt = alt.replace(/]/g, "\\]");
+  return /\s/.test(source)
+    ? `![${escapedAlt}](<${source}>)`
+    : `![${escapedAlt}](${source})`;
 }

@@ -569,6 +569,59 @@ class CanvasTextEngine {
                 }
                 break;
             }
+            case 'table': {
+                const columnCount = Math.max(
+                    1,
+                    token.header ? token.header.length : 0,
+                    ...(token.rows || []).map(row => row.length)
+                );
+                const cellWidth = this.drawWidth / columnCount;
+                const paddingX = 8;
+                const paddingY = 7;
+                const rows = [
+                    { cells: token.header || [], header: true },
+                    ...(token.rows || []).map(cells => ({ cells, header: false }))
+                ];
+
+                for (const row of rows) {
+                    const cells = [];
+                    let maxLines = 1;
+                    for (let index = 0; index < columnCount; index++) {
+                        const cell = row.cells[index];
+                        const tokens = cell && cell.tokens
+                            ? cell.tokens
+                            : [{ type: 'text', text: cell && cell.text ? cell.text : '' }];
+                        const lines = await this.layoutInlineText(
+                            tokens,
+                            cellWidth - (paddingX * 2),
+                            { fontWeight: row.header ? '700' : 'normal' }
+                        );
+                        maxLines = Math.max(maxLines, lines.length);
+                        cells.push({ lines, align: cell && cell.align ? cell.align : 'left' });
+                    }
+                    const rowHeight = Math.max(
+                        baseLineHeight + (paddingY * 2),
+                        (maxLines * baseLineHeight) + (paddingY * 2)
+                    );
+                    layouts.push({
+                        type: 'table-row',
+                        cells,
+                        columnCount,
+                        cellWidth,
+                        paddingX,
+                        paddingY,
+                        isHeader: row.header,
+                        height: rowHeight,
+                        marginTop: 0,
+                        marginBottom: 0
+                    });
+                }
+                layouts.push({
+                    type: 'space',
+                    height: this.config.fontSize * 0.8
+                });
+                break;
+            }
             case 'space': {
                 layouts.push({ type: 'space', height: this.config.fontSize });
                 break;

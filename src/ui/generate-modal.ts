@@ -506,6 +506,24 @@ export class GenerateCardsModal extends Modal {
         this.values.revealOutputAfterGenerate = value;
       }
     );
+    addToggleSetting(
+      details,
+      "质量检查",
+      "检查输出尺寸、空文件和加载失败的图片",
+      this.values.qualityCheck,
+      (value) => {
+        this.values.qualityCheck = value;
+      }
+    );
+    addToggleSetting(
+      details,
+      "生成后系统分享",
+      "主要用于移动设备",
+      this.values.shareAfterGenerate,
+      (value) => {
+        this.values.shareAfterGenerate = value;
+      }
+    );
   }
 
   private applyTemplateDefaults(

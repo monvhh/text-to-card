@@ -59,7 +59,12 @@ export class XhsTextCardSettingTab extends PluginSettingTab {
           "Logo",
           "页码",
           "文件名标题",
-          "品牌预设"
+          "品牌预设",
+          "质量检查",
+          "系统分享",
+          "上次生成",
+          "导入预设",
+          "导出预设"
         ],
         render: (setting) => {
           setting.settingEl.empty();
@@ -504,6 +509,30 @@ export class XhsTextCardSettingTab extends PluginSettingTab {
       });
 
     new Setting(containerEl)
+      .setName("默认执行质量检查")
+      .setDesc("检查导出尺寸、空文件和加载失败的图片")
+      .addToggle((toggle) => {
+        toggle
+          .setValue(this.plugin.settings.qualityCheck)
+          .onChange(async (value) => {
+            this.plugin.settings.qualityCheck = value;
+            await this.plugin.saveSettings();
+          });
+      });
+
+    new Setting(containerEl)
+      .setName("生成后打开系统分享")
+      .setDesc("主要用于支持系统分享面板的移动设备")
+      .addToggle((toggle) => {
+        toggle
+          .setValue(this.plugin.settings.shareAfterGenerate)
+          .onChange(async (value) => {
+            this.plugin.settings.shareAfterGenerate = value;
+            await this.plugin.saveSettings();
+          });
+      });
+
+    new Setting(containerEl)
       .setName("移除 YAML 属性")
       .addToggle((toggle) => {
         toggle
@@ -513,6 +542,8 @@ export class XhsTextCardSettingTab extends PluginSettingTab {
             await this.plugin.saveSettings();
           });
       });
+
+    this.renderLastGeneration(containerEl);
 
     this.renderBrandPresets(containerEl);
     if (SHOW_CUSTOM_TEMPLATES) {
@@ -534,6 +565,20 @@ export class XhsTextCardSettingTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName("品牌预设")
       .setHeading();
+
+    new Setting(containerEl)
+      .setName("预设导入与导出")
+      .setDesc("导出为 Vault 根目录 JSON；导入时按 ID 合并，不删除已有预设")
+      .addButton((button) => {
+        button
+          .setButtonText("导出预设")
+          .onClick(() => void this.plugin.exportPresets());
+      })
+      .addButton((button) => {
+        button
+          .setButtonText("导入预设")
+          .onClick(() => this.plugin.openImportPresets());
+      });
     let presetName = "";
 
     new Setting(containerEl)
@@ -640,6 +685,46 @@ export class XhsTextCardSettingTab extends PluginSettingTab {
             });
         });
     }
+  }
+
+  private renderLastGeneration(containerEl: HTMLElement): void {
+    new Setting(containerEl)
+      .setName("上次生成")
+      .setHeading();
+
+    const record = this.plugin.settings.lastGeneration;
+    new Setting(containerEl)
+      .setName(record ? `${record.pageCount} 张图片` : "暂无记录")
+      .setDesc(
+        record
+          ? `${record.sourcePath} · ${new Date(
+              record.generatedAt
+            ).toLocaleString()}`
+          : "成功生成后会记录来源、输出目录和图片路径"
+      )
+      .addButton((button) => {
+        button
+          .setButtonText("打开")
+          .setDisabled(!record)
+          .onClick(() => void this.plugin.openLastGeneration());
+      })
+      .addButton((button) => {
+        button
+          .setButtonText("分享")
+          .setDisabled(!record)
+          .onClick(() => void this.plugin.shareLastGeneration());
+      })
+      .addExtraButton((button) => {
+        button
+          .setIcon("trash")
+          .setTooltip("清除记录（不会删除图片）")
+          .setDisabled(!record)
+          .onClick(async () => {
+            this.plugin.settings.lastGeneration = null;
+            await this.plugin.saveSettings();
+            this.refreshSettings();
+          });
+      });
   }
 
   private renderCustomTemplates(

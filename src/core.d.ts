@@ -1,4 +1,5 @@
 interface XhsCanvasRenderer {
+  getFailedImages?(): string[];
   render(options: {
     layouts: unknown[];
     index: number;

@@ -20,6 +20,7 @@ const SOCIAL_ICONS = {
 class CanvasRenderer {
     constructor() {
         this.imageCache = new Map();
+        this.failedImages = new Set();
         this.socialIconCanvasCache = new Map();
         this.socialIconImageCache = new Map();
     }
@@ -55,9 +56,16 @@ class CanvasRenderer {
                 this.imageCache.set(src, img);
                 resolve(img);
             };
-            img.onerror = () => resolve(null);
+            img.onerror = () => {
+                this.failedImages.add(src);
+                resolve(null);
+            };
             img.src = src;
         });
+    }
+
+    getFailedImages() {
+        return Array.from(this.failedImages);
     }
 
     async render(options) {
@@ -479,6 +487,8 @@ class CanvasRenderer {
                 ctx.fillStyle = prefixColor;
                 ctx.fillText(layout.prefix, textAreaRect.x, contentY);
                 this.drawStyledLines(ctx, layout.lines, textAreaRect.x + layout.prefixWidth, contentY, config, templateId, textAreaRect.width - layout.prefixWidth, layout.align);
+            } else if (layout.type === 'table-row') {
+                this.drawTableRow(ctx, layout, textAreaRect.x, contentY, config, templateId);
             } else if (layout.type === 'image') {
                 this.drawInlineImage(ctx, layout, textAreaRect.x, contentY);
             } else if (layout.type === 'math-block') {
@@ -490,6 +500,48 @@ class CanvasRenderer {
             }
             currentY += layout.height;
         }
+        ctx.restore();
+    }
+
+    drawTableRow(ctx, layout, x, y, config, templateId) {
+        const borderColor = config.accentColor || 'rgba(0,0,0,0.2)';
+        const headerColor = config.accentColor || config.textColor || '#222';
+        const totalWidth = layout.cellWidth * layout.columnCount;
+
+        ctx.save();
+        if (layout.isHeader) {
+            ctx.globalAlpha = 0.1;
+            ctx.fillStyle = headerColor;
+            ctx.fillRect(x, y, totalWidth, layout.height);
+            ctx.globalAlpha = 1;
+        }
+
+        ctx.strokeStyle = borderColor;
+        ctx.globalAlpha = 0.35;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x, y, totalWidth, layout.height);
+        for (let index = 1; index < layout.columnCount; index++) {
+            const dividerX = x + (layout.cellWidth * index);
+            ctx.beginPath();
+            ctx.moveTo(dividerX, y);
+            ctx.lineTo(dividerX, y + layout.height);
+            ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+
+        layout.cells.forEach((cell, index) => {
+            const cellX = x + (layout.cellWidth * index) + layout.paddingX;
+            this.drawStyledLines(
+                ctx,
+                cell.lines,
+                cellX,
+                y + layout.paddingY,
+                config,
+                templateId,
+                layout.cellWidth - (layout.paddingX * 2),
+                cell.align
+            );
+        });
         ctx.restore();
     }
 

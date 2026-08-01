@@ -31,11 +31,16 @@ const imageFile = {
   path: "Assets/pic.png",
   extension: "png"
 };
+const spacedImageFile = {
+  path: "Assets/my picture.png",
+  extension: "png"
+};
 const app = {
   metadataCache: {
     getFirstLinkpathDest(link) {
       if (link === "Embedded") return embeddedNote;
       if (link === "pic.png") return imageFile;
+      if (link === "Assets/my picture.png") return spacedImageFile;
       return null;
     }
   },
@@ -68,6 +73,8 @@ const markdown = `# 主笔记
 
 ![[pic.png]]
 
+![带空格图片](<Assets/my picture.png>)
+
 > [!tip] 重点提示
 
 - [x] 已完成
@@ -89,6 +96,10 @@ assert.match(output, /## 目标章节/);
 assert.match(output, /保留这段内容/);
 assert.doesNotMatch(output, /下一章节/);
 assert.match(output, /!\[\]\(resource:\/\/Assets\/pic\.png\)/);
+assert.match(
+  output,
+  /!\[带空格图片\]\(<resource:\/\/Assets\/my picture\.png>\)/
+);
 assert.match(output, /> \*\*重点提示\*\*/);
 assert.match(output, /- \[x\] 已完成/);
 assert.match(output, /需要说明\[1\]/);

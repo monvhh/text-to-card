@@ -267,3 +267,10 @@
     grid-template-columns: 1fr;
   }
 }
+.xhs-mermaid-render-host {
+  position: fixed;
+  left: -10000px;
+  width: 800px;
+  visibility: hidden;
+  pointer-events: none;
+}

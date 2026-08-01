@@ -15,6 +15,15 @@ import {
 import { addFileNameTitle } from "../utils/article-title";
 import { prepareMarkdown } from "../utils/markdown";
 import { getPageDimensions } from "../utils/page-ratio";
+import {
+  addFailedImages,
+  checkRenderedPage,
+  createQualityReport,
+  type QualityReport
+} from "./quality-check";
+import { CardGenerationError } from "./generation-errors";
+import { renderMermaidBlocks } from "./mermaid-renderer";
+import { inlineRemoteMarkdownImages } from "./remote-images";
 
 export interface CardGenerationOptions {
   templateId: TemplateId;
@@ -46,12 +55,26 @@ export interface CardGenerationOptions {
   brandPresetId: string;
   updateExisting: boolean;
   outputNameSuffix: string;
+  qualityCheck: boolean;
+  shareAfterGenerate: boolean;
 }
 
 export interface CardGenerationResult {
   files: string[];
   outputFolder: string;
+  quality: QualityReport;
 }
+
+export interface GenerationProgress {
+  phase: "prepare" | "render" | "save" | "quality";
+  current: number;
+  total: number;
+  message: string;
+}
+
+export type GenerationProgressCallback = (
+  progress: GenerationProgress
+) => void;
 
 export interface CardGenerationSession {
   pages: unknown[][];
@@ -69,15 +92,28 @@ export class CardGenerator {
   async generate(
     markdown: string,
     sourceFile: TFile,
-    options: CardGenerationOptions
+    options: CardGenerationOptions,
+    onProgress?: GenerationProgressCallback
   ): Promise<CardGenerationResult> {
+    onProgress?.({
+      phase: "prepare",
+      current: 0,
+      total: 1,
+      message: "正在解析 Markdown 并分页…"
+    });
     const session = await this.prepare(
       markdown,
       sourceFile,
       options
     );
 
-    return this.save(session, sourceFile, options);
+    onProgress?.({
+      phase: "prepare",
+      current: 1,
+      total: 1,
+      message: `分页完成，共 ${session.pages.length} 页`
+    });
+    return this.save(session, sourceFile, options, onProgress);
   }
 
   async prepare(
@@ -85,19 +121,31 @@ export class CardGenerator {
     sourceFile: TFile,
     options: CardGenerationOptions
   ): Promise<CardGenerationSession> {
-    const preparedMarkdown = await prepareMarkdown(
+    const withMermaid = await renderMermaidBlocks(
       this.app,
       markdown,
+      sourceFile.path
+    );
+    const preparedMarkdown = await prepareMarkdown(
+      this.app,
+      withMermaid,
       sourceFile,
       { stripFrontmatter: options.stripFrontmatter }
     );
 
     if (!preparedMarkdown) {
-      throw new Error("没有可生成的内容");
+      throw new CardGenerationError(
+        "EMPTY_CONTENT",
+        "没有可生成的内容",
+        "请选择正文内容，或确认笔记不是只有 YAML 属性。"
+      );
     }
 
+    const portableMarkdown = await inlineRemoteMarkdownImages(
+      preparedMarkdown
+    );
     const articleMarkdown = addFileNameTitle(
-      preparedMarkdown,
+      portableMarkdown,
       sourceFile.basename,
       options.useFileNameAsTitle
     );
@@ -187,7 +235,8 @@ export class CardGenerator {
   async save(
     session: CardGenerationSession,
     sourceFile: TFile,
-    options: CardGenerationOptions
+    options: CardGenerationOptions,
+    onProgress?: GenerationProgressCallback
   ): Promise<CardGenerationResult> {
     const { pages, config, width, height } = session;
 
@@ -195,8 +244,10 @@ export class CardGenerator {
       options.maxPages > 0 &&
       pages.length > options.maxPages
     ) {
-      throw new Error(
-        `分页结果为 ${pages.length} 张，超过最大页数 ${options.maxPages}。请缩短内容、调小字号或增加最大页数`
+      throw new CardGenerationError(
+        "PAGE_LIMIT",
+        `分页结果为 ${pages.length} 张，超过最大页数 ${options.maxPages}`,
+        "请缩短内容、调小字号，或提高最大页数。"
       );
     }
 
@@ -209,8 +260,16 @@ export class CardGenerator {
     const renderer =
       new window.XHS_TEXT_CARD_CORE.CanvasRenderer();
     const files: string[] = [];
+    const quality = createQualityReport();
+    const outputScale = OUTPUT_WIDTH / width;
 
     for (let index = 0; index < pages.length; index += 1) {
+      onProgress?.({
+        phase: "render",
+        current: index + 1,
+        total: pages.length,
+        message: `正在渲染第 ${index + 1}/${pages.length} 页…`
+      });
       const canvas = await renderer.render({
         layouts: pages[index] ?? [],
         index,
@@ -219,7 +278,7 @@ export class CardGenerator {
         templateId: session.templateId,
         width,
         height,
-        scale: OUTPUT_WIDTH / width
+        scale: outputScale
       });
 
       const blob = await canvasToBlob(
@@ -233,6 +292,22 @@ export class CardGenerator {
       );
 
       const data = await blob.arrayBuffer();
+      if (options.qualityCheck) {
+        checkRenderedPage(quality, {
+          page: index + 1,
+          canvasWidth: canvas.width,
+          canvasHeight: canvas.height,
+          expectedWidth: Math.round(width * outputScale),
+          expectedHeight: Math.round(height * outputScale),
+          byteLength: data.byteLength
+        });
+      }
+      onProgress?.({
+        phase: "save",
+        current: index + 1,
+        total: pages.length,
+        message: `正在保存第 ${index + 1}/${pages.length} 页…`
+      });
       const existing =
         this.app.vault.getAbstractFileByPath(filePath);
 
@@ -252,7 +327,20 @@ export class CardGenerator {
       await this.removeStaleImages(outputFolder, files);
     }
 
-    return { files, outputFolder };
+    if (options.qualityCheck) {
+      const failedImages = renderer.getFailedImages?.() ?? [];
+      addFailedImages(quality, failedImages);
+      onProgress?.({
+        phase: "quality",
+        current: pages.length,
+        total: pages.length,
+        message: quality.passed
+          ? "质量检查通过"
+          : `质量检查发现 ${quality.issues.length} 个问题`
+      });
+    }
+
+    return { files, outputFolder, quality };
   }
 
   async renderPreviewPage(
@@ -391,7 +479,13 @@ function canvasToBlob(
         if (blob) {
           resolve(blob);
         } else {
-          reject(new Error("Canvas 转换图片失败"));
+          reject(
+            new CardGenerationError(
+              "CANVAS_EXPORT",
+              "Canvas 转换图片失败",
+              "请检查笔记中的网络图片是否允许跨域访问。"
+            )
+          );
         }
       },
       mimeType,

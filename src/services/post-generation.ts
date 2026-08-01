@@ -100,6 +100,34 @@ export async function revealGeneratedFile(
   return "opened";
 }
 
+export async function shareGeneratedFiles(
+  app: App,
+  filePaths: string[],
+  title: string
+): Promise<void> {
+  if (!navigator.share) {
+    throw new Error("当前设备不支持系统分享");
+  }
+
+  const files = await Promise.all(
+    filePaths.map(async (path) => {
+      const data = await app.vault.adapter.readBinary(path);
+      const mimeType = path.toLowerCase().endsWith(".jpg")
+        ? "image/jpeg"
+        : "image/png";
+      const name = path.split("/").pop() ?? "card.png";
+      return new File([data], name, { type: mimeType });
+    })
+  );
+  const shareData: ShareData = { title, files };
+
+  if (navigator.canShare && !navigator.canShare(shareData)) {
+    throw new Error("当前设备不支持分享这些图片文件");
+  }
+
+  await navigator.share(shareData);
+}
+
 interface FileExplorerView {
   revealInFolder?: (file: TFile) => Promise<void>;
 }

@@ -9,6 +9,8 @@ const module = await bundleModules([
   "src/utils/font-presets.ts",
   "src/utils/layout-summary.ts",
   "src/utils/page-ratio.ts",
+  "src/utils/preset-transfer.ts",
+  "src/services/quality-check.ts",
   "src/settings.ts",
   "src/templates/index.ts"
 ]);
@@ -101,6 +103,53 @@ assert.equal(module.DEFAULT_SETTINGS.accentColor, "#8c3a3a");
 assert.equal(module.DEFAULT_SETTINGS.fontSize, 18);
 assert.equal(module.DEFAULT_SETTINGS.pageRatio, "3:4");
 assert.equal(module.DEFAULT_SETTINGS.useFileNameAsTitle, true);
+assert.equal(module.DEFAULT_SETTINGS.qualityCheck, true);
+assert.equal(module.DEFAULT_SETTINGS.lastGeneration, null);
+
+const migrated = module.migrateSettings({
+  template: "blank",
+  format: "jpeg",
+  outputDir: "Cards",
+  fontSize: 99,
+  brandPresets: []
+});
+assert.equal(migrated.fromVersion, 0);
+assert.equal(migrated.migrated, true);
+assert.equal(migrated.settings.templateId, "blank");
+assert.equal(migrated.settings.exportFormat, "jpeg");
+assert.equal(migrated.settings.outputFolder, "Cards");
+assert.equal(migrated.settings.fontSize, 24);
+assert.equal(
+  migrated.settings.settingsVersion,
+  module.SETTINGS_SCHEMA_VERSION
+);
+
+const presetJson = module.serializePresetBundle({
+  ...module.DEFAULT_SETTINGS,
+  brandPresets: [{
+    id: "brand-test",
+    name: "测试品牌",
+    signatureText: "签名",
+    watermarkText: "水印",
+    bgColor: "#ffffff",
+    textColor: "#111111",
+    accentColor: "#ff0000",
+    fontFamily: "inherit",
+    logoPath: ""
+  }]
+});
+assert.equal(module.parsePresetBundle(presetJson).brandPresets.length, 1);
+
+const quality = module.createQualityReport();
+module.checkRenderedPage(quality, {
+  page: 1,
+  canvasWidth: 1242,
+  canvasHeight: 1657,
+  expectedWidth: 1242,
+  expectedHeight: 1657,
+  byteLength: 100
+});
+assert.equal(quality.passed, true);
 assert.equal(
   module.applyFrontmatterSettings(module.DEFAULT_SETTINGS, {
     "xhs-use-file-title": false

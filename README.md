@@ -11,7 +11,7 @@ locally in Canvas, and note content is never uploaded.
 - PNG and JPEG export at 1242-pixel width
 - 2:3, 3:4 and 9:16 page ratios with automatic repagination
 - Canvas preview with optional page removal
-- Markdown headings, lists, quotes, code, images, callouts, tasks and footnotes
+- Markdown headings, tables, Mermaid, lists, quotes, code, images, callouts, tasks and footnotes
 - Obsidian Wiki links, image embeds, note embeds and section embeds
 - Optional file-name heading with duplicate-title prevention
 - Fixed template backgrounds, custom text/accent colors, typography, cover image, Logo, signature and watermark
@@ -19,6 +19,8 @@ locally in Canvas, and note content is never uploaded.
 - Nine font presets plus custom font-family support
 - Batch generation by Vault folder and tag
 - Optional image-link insertion, first-image clipboard copy and output reveal
+- Versioned settings migrations, per-page progress and actionable errors
+- Export quality checks, last-generation history, preset transfer and system sharing
 - Responsive layouts for desktop and mobile Obsidian
 
 ## Image sizes
@@ -77,12 +79,16 @@ the entire active note is used.
   It does not read existing clipboard contents. Unsupported devices show a
   notice without interrupting image generation.
 - **Network access:** Notes are not uploaded. A remote image referenced in
-  Markdown is requested directly from its original host, which can expose
+  Markdown is downloaded directly from its original host and inlined for the
+  current export, which can expose
   standard request information to that host. Vault-local images do not make
   network requests.
 - The plugin has no accounts, payments, subscriptions, advertisements or
   telemetry.
 - The plugin does not publish content to Xiaohongshu or any other platform.
+- **System sharing:** Only after the user runs a share command or enables the
+  post-generation share action, generated files are handed to the operating
+  system share sheet and the destination selected by the user.
 
 ## Support and source code
 
@@ -131,8 +137,11 @@ are included in this repository.
 - 品牌色、签名、字体和 Logo 预设
 - `---` 强制分页、隐藏内容、内容块锁定和最大页数限制
 - Obsidian 图片、Wiki 链接、笔记/章节嵌入、Callout、任务列表和脚注
+- Markdown 表格、Mermaid、远程图片内联和导出质量检查
 - 可将 Obsidian 文件名自动作为正文一级标题，且不修改原笔记
 - 生成后插入图片、复制首图、定位输出文件
+- 上次生成记录、预设 JSON 导入导出和系统分享
+- 版本化设置迁移、逐页生成进度和可操作错误提示
 - 文件夹批量、标签筛选、一篇笔记多模板和稳定目录更新
 - YAML 属性和 `obsidian://xhs-text-card` 外部调用
 - 编辑器、文件列表、命令面板和 Ribbon 多种入口
@@ -184,6 +193,7 @@ npm run check:all
 - Markdown 中的远程图片会由客户端直接请求原图片地址，因此可能向该图片
   主机暴露常规网络请求信息；Vault 内图片不会产生此类请求
 - 插件不会自动发布内容到小红书或其他第三方平台
+- 智能封面不在当前功能或路线图中
 
 问题和建议请提交到
 [GitHub Issues](https://github.com/monvhh/text-to-card/issues)。

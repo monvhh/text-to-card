@@ -9,6 +9,7 @@ import {
 } from "obsidian";
 import {
   DEFAULT_SETTINGS,
+  migrateSettings,
   type XhsTextCardSettings
 } from "./settings";
 import {
@@ -21,7 +22,8 @@ import {
   appendGeneratedImageLinks,
   copyVaultImageToClipboard,
   insertGeneratedImageLinks,
-  revealGeneratedFile
+  revealGeneratedFile,
+  shareGeneratedFiles
 } from "./services/post-generation";
 import { GenerateCardsModal } from "./ui/generate-modal";
 import {
@@ -30,6 +32,15 @@ import {
 } from "./ui/batch-modal";
 import { PageEditorModal } from "./ui/page-editor-modal";
 import { XhsTextCardSettingTab } from "./ui/settings-tab";
+import {
+  formatGenerationError,
+  toGenerationError
+} from "./services/generation-errors";
+import {
+  exportPresetsToVault,
+  importPresetsFromVault
+} from "./services/preset-files";
+import { JsonFileSuggestModal } from "./ui/json-file-suggest-modal";
 import { applyFrontmatterSettings } from "./utils/frontmatter-settings";
 import {
   TEMPLATE_IDS,
@@ -86,6 +97,30 @@ export default class XhsTextCardPlugin extends Plugin {
       id: "batch-generate-cards",
       name: "Make cards in batch",
       callback: () => this.openBatchGenerator()
+    });
+
+    this.addCommand({
+      id: "open-last-generated-cards",
+      name: "Open last generated cards",
+      callback: () => void this.openLastGeneration()
+    });
+
+    this.addCommand({
+      id: "share-last-generated-cards",
+      name: "Share last generated cards",
+      callback: () => void this.shareLastGeneration()
+    });
+
+    this.addCommand({
+      id: "export-card-presets",
+      name: "Export presets",
+      callback: () => void this.exportPresets()
+    });
+
+    this.addCommand({
+      id: "import-card-presets",
+      name: "Import presets",
+      callback: () => this.openImportPresets()
     });
 
     this.registerObsidianProtocolHandler(
@@ -145,30 +180,102 @@ export default class XhsTextCardPlugin extends Plugin {
 
   async loadSettings(): Promise<void> {
     const saved = (await this.loadData()) as
-      | Partial<XhsTextCardSettings>
+      | Record<string, unknown>
       | null;
-    this.settings = Object.assign(
-      {},
-      DEFAULT_SETTINGS,
-      saved
-    );
+    const migration = migrateSettings(saved);
+    this.settings = migration.settings;
 
-    if (!saved?.templateSelection) {
-      this.settings.templateSelection = this.settings.templateId;
-    }
-
-    for (const key of [
-      "brandPresets",
-      "customTemplates"
-    ] as const) {
-      if (!Array.isArray(this.settings[key])) {
-        this.settings[key] = [];
-      }
+    if (migration.migrated && saved) {
+      await this.saveData(this.settings);
     }
   }
 
   async saveSettings(): Promise<void> {
     await this.saveData(this.settings);
+  }
+
+  async openLastGeneration(): Promise<void> {
+    const firstFile = this.settings.lastGeneration?.files[0];
+    if (!firstFile) {
+      new Notice("还没有生成记录");
+      return;
+    }
+    try {
+      await revealGeneratedFile(this.app, firstFile);
+    } catch (error) {
+      new Notice(
+        `上次生成的文件已不存在：${
+          error instanceof Error ? error.message : String(error)
+        }`,
+        8000
+      );
+    }
+  }
+
+  async shareLastGeneration(): Promise<void> {
+    const record = this.settings.lastGeneration;
+    if (!record?.files.length) {
+      new Notice("还没有可分享的生成记录");
+      return;
+    }
+    try {
+      await shareGeneratedFiles(
+        this.app,
+        record.files,
+        record.sourcePath.split("/").pop()?.replace(/\.md$/i, "") ??
+          "Text to Card"
+      );
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return;
+      }
+      new Notice(
+        `分享失败：${
+          error instanceof Error ? error.message : String(error)
+        }`,
+        8000
+      );
+    }
+  }
+
+  async exportPresets(): Promise<void> {
+    try {
+      const path = await exportPresetsToVault(
+        this.app,
+        this.settings
+      );
+      new Notice(`预设已导出：${path}`, 8000);
+    } catch (error) {
+      new Notice(
+        `导出预设失败：${
+          error instanceof Error ? error.message : String(error)
+        }`,
+        8000
+      );
+    }
+  }
+
+  openImportPresets(): void {
+    new JsonFileSuggestModal(this.app, (file) => {
+      void (async () => {
+        try {
+          this.settings = await importPresetsFromVault(
+            this.app,
+            this.settings,
+            file
+          );
+          await this.saveSettings();
+          new Notice("预设导入完成");
+        } catch (error) {
+          new Notice(
+            `导入预设失败：${
+              error instanceof Error ? error.message : String(error)
+            }`,
+            8000
+          );
+        }
+      })();
+    }).open();
   }
 
   private makeForActiveNote(): void {
@@ -305,16 +412,18 @@ export default class XhsTextCardPlugin extends Plugin {
             await this.generator.generate(
               markdown,
               file,
-              generationOptions
+              generationOptions,
+              (progress) => {
+                notice.setMessage(
+                  `${fileIndex + 1}/${files.length} · ${file.basename} · ${progress.message}`
+                );
+              }
             );
             succeeded += 1;
           } catch (error) {
+            const normalized = toGenerationError(error);
             failures.push(
-              `${file.path} (${templateId})：${
-                error instanceof Error
-                  ? error.message
-                  : String(error)
-              }`
+              `${file.path} (${templateId}) [${normalized.code}]：${normalized.message}`
             );
           }
         }
@@ -466,7 +575,8 @@ export default class XhsTextCardPlugin extends Plugin {
       const result = await this.generator.generate(
         markdown,
         file,
-        options
+        options,
+        (progress) => notice.setMessage(progress.message)
       );
       await this.completeGeneration(
         result,
@@ -476,14 +586,7 @@ export default class XhsTextCardPlugin extends Plugin {
       );
     } catch (error) {
       console.error("[Text to Card] Generation failed", error);
-      new Notice(
-        `生成失败：${
-          error instanceof Error
-            ? error.message
-            : String(error)
-        }`,
-        10000
-      );
+      new Notice(formatGenerationError(error), 12000);
     } finally {
       notice.hide();
       this.isGenerating = false;
@@ -532,7 +635,9 @@ export default class XhsTextCardPlugin extends Plugin {
         logoPath: options.logoPath,
         brandPresetId: options.brandPresetId,
         updateExisting: options.updateExisting,
-        outputNameSuffix: options.outputNameSuffix
+        outputNameSuffix: options.outputNameSuffix,
+        qualityCheck: options.qualityCheck,
+        shareAfterGenerate: options.shareAfterGenerate
       };
     }
 
@@ -585,12 +690,8 @@ export default class XhsTextCardPlugin extends Plugin {
       );
       notice.hide();
       new Notice(
-        `预览失败：${
-          error instanceof Error
-            ? error.message
-            : String(error)
-        }`,
-        10000
+        formatGenerationError(error).replace("生成失败", "预览失败"),
+        12000
       );
       this.isGenerating = false;
     }
@@ -611,7 +712,8 @@ export default class XhsTextCardPlugin extends Plugin {
       const result = await this.generator.save(
         session,
         file,
-        options
+        options,
+        (progress) => notice.setMessage(progress.message)
       );
       await this.completeGeneration(
         result,
@@ -622,14 +724,7 @@ export default class XhsTextCardPlugin extends Plugin {
     } catch (error) {
       console.error("[Text to Card] Generation failed", error);
       notice.hide();
-      new Notice(
-        `生成失败：${
-          error instanceof Error
-            ? error.message
-            : String(error)
-        }`,
-        10000
-      );
+      new Notice(formatGenerationError(error), 12000);
     } finally {
       notice.hide();
       this.isGenerating = false;
@@ -643,6 +738,17 @@ export default class XhsTextCardPlugin extends Plugin {
     context: GenerationContext
   ): Promise<void> {
     const completedActions: string[] = [];
+
+    this.settings.lastGeneration = {
+      sourcePath: file.path,
+      files: result.files,
+      outputFolder: result.outputFolder,
+      generatedAt: new Date().toISOString(),
+      pageCount: result.files.length,
+      templateId: options.templateId,
+      pageRatio: options.pageRatio
+    };
+    await this.saveSettings();
 
     if (options.insertLinksAfterGenerate) {
       if (context.editor && context.insertionPosition) {
@@ -709,15 +815,46 @@ export default class XhsTextCardPlugin extends Plugin {
       }
     }
 
+    if (options.shareAfterGenerate && result.files.length > 0) {
+      try {
+        await shareGeneratedFiles(
+          this.app,
+          result.files,
+          file.basename
+        );
+        completedActions.push("已打开系统分享");
+      } catch (error) {
+        if (!(error instanceof DOMException && error.name === "AbortError")) {
+          new Notice(
+            `图片已生成，但系统分享失败：${
+              error instanceof Error ? error.message : String(error)
+            }`,
+            8000
+          );
+        }
+      }
+    }
+
+    if (options.qualityCheck) {
+      completedActions.push(
+        result.quality.passed
+          ? "质量检查通过"
+          : `质量检查：${result.quality.issues.length} 个警告`
+      );
+    }
+
     new Notice(
       [
         `生成完成：${result.files.length} 张图片`,
         result.outputFolder,
-        completedActions.join("，")
+        completedActions.join("，"),
+        ...result.quality.issues
+          .slice(0, 2)
+          .map((issue) => `⚠ ${issue.message}`)
       ]
         .filter(Boolean)
         .join("\n"),
-      8000
+      result.quality.issues.length > 0 ? 12000 : 8000
     );
   }
 }

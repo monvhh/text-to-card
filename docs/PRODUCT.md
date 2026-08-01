@@ -23,6 +23,7 @@ Text to Card for Obsidian 是一款本地运行的内容生产插件，将 Markd
 - Obsidian `[[Wiki 链接]]`、`![[图片]]` 和标准 Markdown 图片
 - `![[笔记]]` 整篇嵌入与 `![[笔记#章节]]` 章节嵌入
 - 标题、段落、粗体、斜体、删除线、引用、列表、代码和图片
+- Markdown 表格按行排版和跨页，Mermaid 使用 Obsidian 渲染后嵌入
 - `==高亮==`、Callout 标题、已完成/未完成任务和脚注
 - 可将 Obsidian 文件名作为正文一级标题，并自动避免同名标题重复
 - 可关闭文章标题注入，关闭后仅按文档原内容生成
@@ -69,6 +70,10 @@ Text to Card for Obsidian 是一款本地运行的内容生产插件，将 Markd
 - 将首张图片复制到系统剪贴板
 - 在文件管理器定位结果，必要时打开首图
 - 浏览器单张下载和全部页面 ZIP
+- 生成阶段与逐页保存进度、结构化错误代码和修复建议
+- 导出尺寸、空文件和图片加载失败质量检查
+- 上次生成记录，可再次打开或调用系统分享
+- 品牌/自定义预设使用带版本的 JSON 文件导入导出
 
 ### 批量与自动化
 
@@ -88,6 +93,7 @@ Text to Card for Obsidian 是一款本地运行的内容生产插件，将 Markd
 - Markdown 编辑器右键菜单
 - 文件列表右键菜单
 - Obsidian URI
+- **Open last generated cards** 与 **Share last generated cards**
 
 ## 版本路线完成情况
 
@@ -97,11 +103,16 @@ Text to Card for Obsidian 是一款本地运行的内容生产插件，将 Markd
 - v0.5 品牌与模板系统：已完成
 - v0.6 批量与自动化：已完成
 - v1.0 统一交付、迁移兼容和完整测试：已完成
+- v1.1 设置迁移、生成进度、错误提示和自动发布：已完成
+- v1.2 表格、Mermaid、图片兼容和质量检查：已完成
+- v1.3 上次生成记录、预设导入导出和系统分享：已完成
+
+智能封面不在当前产品范围或路线图中。
 
 ## 当前边界
 
 - 不直接登录或自动发布到小红书
-- 远程图片仍可能受来源站点跨域策略影响
+- 远程图片无法访问或超过 12 MB 时会保留原地址，并由质量检查提示加载失败
 - 自定义字体使用设备已经安装的字体族，不内嵌字体文件
 - 移动端生成大量高清页面时可能受到设备内存限制
 - 分页预览只提供删除/隐藏，不提供移动、合并、拆分或自由画布拖拽
@@ -121,6 +132,11 @@ src/
 ├── settings.ts
 ├── services/
 │   ├── card-generator.ts
+│   ├── generation-errors.ts
+│   ├── mermaid-renderer.ts
+│   ├── quality-check.ts
+│   ├── remote-images.ts
+│   ├── preset-files.ts
 │   └── post-generation.ts
 ├── ui/
 │   ├── generate-modal.ts
@@ -133,6 +149,7 @@ src/
 │   ├── pagination-directives.ts
 │   ├── frontmatter-settings.ts
 │   ├── custom-templates.ts
+│   ├── preset-transfer.ts
 │   └── batch.ts
 ├── templates/
 └── vendor/

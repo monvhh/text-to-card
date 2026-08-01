@@ -13,6 +13,7 @@ node --check main.js
 - 分页指令、锁定块整体换页和超高块回退测试
 - 笔记章节嵌入、图片、Callout、任务和脚注测试
 - 文件夹/标签/模板筛选与自定义模板 JSON 测试
+- 设置迁移、预设包、质量检查和表格行布局测试
 - TypeScript 类型检查和 Obsidian 生产构建
 - Vite 浏览器预览生产构建
 
@@ -46,6 +47,21 @@ npm run preview
 9. 自定义模板保持隐藏，配置数据升级后仍保留
 10. 品牌预设重启后仍保留，模板顺序保持固定
 11. `obsidian://xhs-text-card` 单文件和批量 URI 可调用
+12. 包含表格的长笔记按表格行分页，边框和标题行正常
+13. Mermaid 成功显示；错误语法降级为可读代码块而不阻塞导出
+14. 远程图片和包含空格的 Vault 图片可导出，失败图片出现在质量警告中
+15. 上次生成可以打开和分享，清除记录不会删除图片
+16. 预设导出后可重新导入，已有同 ID 预设被更新且其他预设保留
+
+## 自动发布
+
+推送与 `manifest.json` 一致的 `x.y.z` 标签后，GitHub Actions 会执行完整检查、
+验证 `package.json`、`manifest.json` 与 `versions.json`，然后创建 GitHub Release，
+上传 `main.js`、`manifest.json`、`styles.css` 和 ZIP。
+
+```bash
+node scripts/verify-release-version.mjs 1.3.0
+```
 
 ## 安装包检查
 

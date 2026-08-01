@@ -1,6 +1,6 @@
 {
   "name": "obsidian-xhs-text-card",
-  "version": "1.0.6",
+  "version": "1.3.0",
   "description": "Generate Xiaohongshu-style image cards from Obsidian notes.",
   "main": "main.js",
   "type": "module",
@@ -13,7 +13,8 @@
     "test:pagination": "node scripts/test-pagination.mjs",
     "test:markdown": "node scripts/test-markdown.mjs",
     "test:config": "node scripts/test-config.mjs",
-    "test": "npm run test:pagination && npm run test:markdown && npm run test:config",
+    "test:rendering": "node scripts/test-rendering.mjs",
+    "test": "npm run test:pagination && npm run test:markdown && npm run test:config && npm run test:rendering",
     "check:all": "npm test && npm run build && npm run preview:build"
   },
   "keywords": [
