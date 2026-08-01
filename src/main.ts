@@ -41,6 +41,11 @@ import {
   importPresetsFromVault
 } from "./services/preset-files";
 import { JsonFileSuggestModal } from "./ui/json-file-suggest-modal";
+import { PublishDraftModal } from "./ui/publish-draft-modal";
+import {
+  PublishingService,
+  type PublishDraftOptions
+} from "./publishing/publishing-service";
 import { applyFrontmatterSettings } from "./utils/frontmatter-settings";
 import {
   TEMPLATE_IDS,
@@ -55,11 +60,13 @@ import {
 export default class XhsTextCardPlugin extends Plugin {
   settings: XhsTextCardSettings = { ...DEFAULT_SETTINGS };
   private generator!: CardGenerator;
+  private publisher!: PublishingService;
   private isGenerating = false;
 
   async onload(): Promise<void> {
     await this.loadSettings();
     this.generator = new CardGenerator(this.app);
+    this.publisher = new PublishingService(this.app);
 
     this.addRibbonIcon(
       "images",
@@ -121,6 +128,27 @@ export default class XhsTextCardPlugin extends Plugin {
       id: "import-card-presets",
       name: "Import presets",
       callback: () => this.openImportPresets()
+    });
+
+    this.addCommand({
+      id: "save-note-to-platform-draft",
+      name: "Make cards and save to platform draft",
+      editorCallback: (editor, view) => {
+        if (!view.file) {
+          new Notice("请先打开一个 Markdown 文件");
+          return;
+        }
+        this.openGenerateAndPublishDraft(
+          editor.getSelection() || editor.getValue(),
+          view.file
+        );
+      }
+    });
+
+    this.addCommand({
+      id: "save-last-generated-cards-to-platform-draft",
+      name: "Save last generated cards to platform draft",
+      callback: () => this.openLastGeneratedPublishDraft()
     });
 
     this.registerObsidianProtocolHandler(
@@ -276,6 +304,161 @@ export default class XhsTextCardPlugin extends Plugin {
         }
       })();
     }).open();
+  }
+
+  private openGenerateAndPublishDraft(
+    markdown: string,
+    file: TFile
+  ): void {
+    new PublishDraftModal(
+      this.app,
+      this.settings,
+      file.basename,
+      async (options) => {
+        await this.generateAndSavePlatformDraft(
+          markdown,
+          file,
+          options
+        );
+      }
+    ).open();
+  }
+
+  private openLastGeneratedPublishDraft(): void {
+    const record = this.settings.lastGeneration;
+    if (!record?.files.length) {
+      new Notice("还没有可发布的生成记录");
+      return;
+    }
+    const sourceFile = this.app.vault.getFileByPath(
+      record.sourcePath
+    );
+    if (!(sourceFile instanceof TFile)) {
+      new Notice("上次生成记录对应的源笔记已不存在");
+      return;
+    }
+    new PublishDraftModal(
+      this.app,
+      this.settings,
+      sourceFile.basename,
+      async (options) => {
+        await this.saveGeneratedCardsToDraft(
+          record.files,
+          sourceFile,
+          options
+        );
+      }
+    ).open();
+  }
+
+  private async generateAndSavePlatformDraft(
+    markdown: string,
+    file: TFile,
+    options: PublishDraftOptions
+  ): Promise<void> {
+    if (this.isGenerating) {
+      new Notice("已有生成或发布任务正在进行");
+      return;
+    }
+    const frontmatter =
+      this.app.metadataCache.getFileCache(file)?.frontmatter;
+    const resolved = applyFrontmatterSettings(
+      this.settings,
+      frontmatter
+    );
+    const generationOptions: CardGenerationOptions = {
+      ...resolved.settings,
+      coverTitle: resolved.coverTitle ?? file.basename
+    };
+    const notice = new Notice("正在生成待发布的卡片…", 0);
+    this.isGenerating = true;
+    try {
+      const generated = await this.generator.generate(
+        markdown,
+        file,
+        generationOptions,
+        (progress) => notice.setMessage(progress.message)
+      );
+      await this.rememberGeneration(
+        generated,
+        file,
+        generationOptions
+      );
+      const result = await this.publisher.saveDraft(
+        generated.files,
+        file,
+        options,
+        this.settings,
+        (progress) => notice.setMessage(progress.message)
+      );
+      notice.hide();
+      new Notice(
+        [
+          `已生成 ${generated.files.length} 张卡片`,
+          result.message,
+          result.draftId ? `草稿 ID：${result.draftId}` : "",
+          result.url ?? ""
+        ]
+          .filter(Boolean)
+          .join("\n"),
+        10000
+      );
+    } catch (error) {
+      console.error("[Text to Card] Generate/publish draft failed");
+      notice.hide();
+      new Notice(
+        `生成或保存草稿失败：${
+          error instanceof Error ? error.message : String(error)
+        }`,
+        12000
+      );
+    } finally {
+      notice.hide();
+      this.isGenerating = false;
+    }
+  }
+
+  private async saveGeneratedCardsToDraft(
+    cardPaths: string[],
+    file: TFile,
+    options: PublishDraftOptions
+  ): Promise<void> {
+    if (this.isGenerating) {
+      new Notice("已有生成或发布任务正在进行");
+      return;
+    }
+    const notice = new Notice("正在准备卡片图片…", 0);
+    this.isGenerating = true;
+    try {
+      const result = await this.publisher.saveDraft(
+        cardPaths,
+        file,
+        options,
+        this.settings,
+        (progress) => notice.setMessage(progress.message)
+      );
+      new Notice(
+        [
+          result.message,
+          result.draftId ? `草稿 ID：${result.draftId}` : "",
+          result.url ?? ""
+        ]
+          .filter(Boolean)
+          .join("\n"),
+        10000
+      );
+    } catch (error) {
+      console.error("[Text to Card] Publish generated cards failed");
+      new Notice(
+        `保存草稿失败：${
+          error instanceof Error ? error.message : String(error)
+        }`,
+        12000
+      );
+    } finally {
+      notice.hide();
+      this.isGenerating = false;
+    }
   }
 
   private makeForActiveNote(): void {
@@ -739,16 +922,7 @@ export default class XhsTextCardPlugin extends Plugin {
   ): Promise<void> {
     const completedActions: string[] = [];
 
-    this.settings.lastGeneration = {
-      sourcePath: file.path,
-      files: result.files,
-      outputFolder: result.outputFolder,
-      generatedAt: new Date().toISOString(),
-      pageCount: result.files.length,
-      templateId: options.templateId,
-      pageRatio: options.pageRatio
-    };
-    await this.saveSettings();
+    await this.rememberGeneration(result, file, options);
 
     if (options.insertLinksAfterGenerate) {
       if (context.editor && context.insertionPosition) {
@@ -856,6 +1030,23 @@ export default class XhsTextCardPlugin extends Plugin {
         .join("\n"),
       result.quality.issues.length > 0 ? 12000 : 8000
     );
+  }
+
+  private async rememberGeneration(
+    result: CardGenerationResult,
+    file: TFile,
+    options: CardGenerationOptions
+  ): Promise<void> {
+    this.settings.lastGeneration = {
+      sourcePath: file.path,
+      files: result.files,
+      outputFolder: result.outputFolder,
+      generatedAt: new Date().toISOString(),
+      pageCount: result.files.length,
+      templateId: options.templateId,
+      pageRatio: options.pageRatio
+    };
+    await this.saveSettings();
   }
 }
 

@@ -105,6 +105,9 @@ assert.equal(module.DEFAULT_SETTINGS.pageRatio, "3:4");
 assert.equal(module.DEFAULT_SETTINGS.useFileNameAsTitle, true);
 assert.equal(module.DEFAULT_SETTINGS.qualityCheck, true);
 assert.equal(module.DEFAULT_SETTINGS.lastGeneration, null);
+assert.equal(module.DEFAULT_SETTINGS.wechatAppSecretName, "");
+assert.equal(module.DEFAULT_SETTINGS.webhookTokenSecretName, "");
+assert.equal(module.SETTINGS_SCHEMA_VERSION, 4);
 
 const migrated = module.migrateSettings({
   template: "blank",

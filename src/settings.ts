@@ -6,7 +6,7 @@ import {
 
 export type ExportFormat = "png" | "jpeg";
 
-export const SETTINGS_SCHEMA_VERSION = 3;
+export const SETTINGS_SCHEMA_VERSION = 4;
 
 export interface LastGenerationRecord {
   sourcePath: string;
@@ -81,6 +81,14 @@ export interface XhsTextCardSettings {
   qualityCheck: boolean;
   shareAfterGenerate: boolean;
   lastGeneration: LastGenerationRecord | null;
+  wechatAppId: string;
+  wechatAppSecretName: string;
+  draftDefaultAuthor: string;
+  draftDefaultSourceUrl: string;
+  wechatOpenComments: boolean;
+  webhookPlatformName: string;
+  webhookEndpoint: string;
+  webhookTokenSecretName: string;
 }
 
 export const DEFAULT_SETTINGS: XhsTextCardSettings = {
@@ -119,7 +127,15 @@ export const DEFAULT_SETTINGS: XhsTextCardSettings = {
   outputNameSuffix: "",
   qualityCheck: true,
   shareAfterGenerate: false,
-  lastGeneration: null
+  lastGeneration: null,
+  wechatAppId: "",
+  wechatAppSecretName: "",
+  draftDefaultAuthor: "",
+  draftDefaultSourceUrl: "",
+  wechatOpenComments: false,
+  webhookPlatformName: "",
+  webhookEndpoint: "",
+  webhookTokenSecretName: ""
 };
 
 export interface SettingsMigrationResult {

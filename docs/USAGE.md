@@ -343,3 +343,26 @@ obsidian://xhs-text-card?folder=Posts&templates=blank,starry-night&tag=xhs&updat
 自定义模板和品牌预设会保留。智能封面不在当前功能或路线图中。
 
 完整自动测试与人工回归步骤见 [TESTING.md](TESTING.md)。
+
+## 13. 微信与多平台草稿
+
+详细配置和 Webhook 数据格式见 [平台草稿说明](PUBLISHING.md)。
+
+1. 在 **设置 → Text to Card → 平台草稿** 配置微信公众号或 Webhook
+2. 在 Obsidian SecretStorage 创建 AppSecret/Token，并在设置中选择密钥名称
+3. 打开文章，从命令面板执行 **Make cards and save to platform draft**
+4. 选择微信公众号或多平台 Webhook，检查标题和贴图配文
+5. 点击 **保存草稿**；插件先使用当前默认设置生成图片，再发送图片草稿
+
+如果图片已经生成，可执行 **Save last generated cards to platform draft**，直接
+发送上次生成记录中的全部图片，不再重复渲染。
+
+微信公众号模式使用 `newspic` 图片消息结构。每张 PNG/JPEG 卡片会上传为永久
+图片素材，并按页码顺序写入 `image_info.image_list`；最多 20 张，第一张由微信
+自动作为封面。这是公众号贴图草稿，不是图文文章草稿。
+
+Webhook 模式只发送草稿标题等必要元数据和生成后的卡片图片，不发送 Markdown
+原文或渲染后的文章 HTML。
+
+该功能只调用草稿箱接口，不调用正式发布接口。公众号必须具备相应接口权限，且
+微信后台的 IP 白名单需要允许当前网络出口 IP。

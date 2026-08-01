@@ -2,8 +2,9 @@
 
 Convert an Obsidian note or selected Markdown into multi-page image cards in
 2:3, 3:4 or 9:16 format. Generate and save with one command, or open the
-preview when you want to adjust the result. Pagination and rendering run
-locally in Canvas, and note content is never uploaded.
+preview when you want to adjust the result. Pagination and card rendering run
+locally in Canvas. Generated card images leave the device only when you
+explicitly run a platform-draft command and confirm it.
 
 ## Features
 
@@ -21,6 +22,8 @@ locally in Canvas, and note content is never uploaded.
 - Optional image-link insertion, first-image clipboard copy and output reveal
 - Versioned settings migrations, per-page progress and actionable errors
 - Export quality checks, last-generation history, preset transfer and system sharing
+- One-command card generation and image-draft saving to WeChat Official Accounts
+- Reuse the last generated card set or send card images to a custom multi-platform Webhook
 - Responsive layouts for desktop and mobile Obsidian
 
 ## Image sizes
@@ -78,13 +81,21 @@ the entire active note is used.
   enabled, the plugin writes the first generated image to the system clipboard.
   It does not read existing clipboard contents. Unsupported devices show a
   notice without interrupting image generation.
-- **Network access:** Notes are not uploaded. A remote image referenced in
+- **Network access for card generation:** Notes are not uploaded. A remote image referenced in
   Markdown is downloaded directly from its original host and inlined for the
   current export, which can expose
   standard request information to that host. Vault-local images do not make
   network requests.
-- The plugin has no accounts, payments, subscriptions, advertisements or
-  telemetry.
+- **Optional publishing:** Only after the user runs **Make cards and save to
+  platform draft** or **Save last generated cards to platform draft** and
+  confirms the dialog does the plugin send generated PNG/JPEG cards. Markdown
+  source and rendered article HTML are not sent. The plugin saves a draft and
+  never requests publication.
+- **Credentials:** WeChat AppSecret and optional Webhook Bearer tokens use
+  Obsidian SecretStorage. Plugin `data.json` stores only secret names.
+- WeChat publishing requires the user's own eligible Official Account API
+  credentials. A custom Webhook may require an account operated by its owner.
+- The plugin has no built-in payments, subscriptions, advertisements or telemetry.
 - The plugin does not publish content to Xiaohongshu or any other platform.
 - **System sharing:** Only after the user runs a share command or enables the
   post-generation share action, generated files are handed to the operating
@@ -106,8 +117,8 @@ are included in this repository.
 ## 中文说明
 
 把 Obsidian 笔记或选中的 Markdown 内容转换为 2:3、3:4 或 9:16 多页图片
-卡片。既可以用一个命令直接生成并保存，也可以先进入预览调整。所有内容均在
-本地 Canvas 中完成分页和渲染，不上传笔记。
+卡片。既可以用一个命令直接生成并保存，也可以先进入预览调整。卡片功能在本地
+Canvas 中完成分页和渲染；只有主动保存平台草稿时才会发送生成后的卡片图片。
 
 ## 三种图片尺寸
 
@@ -142,6 +153,8 @@ are included in this repository.
 - 生成后插入图片、复制首图、定位输出文件
 - 上次生成记录、预设 JSON 导入导出和系统分享
 - 版本化设置迁移、逐页生成进度和可操作错误提示
+- 一键生成卡片并将全部图片保存为微信公众号贴图草稿
+- 可直接发布上次生成结果，或通过自建多平台 Webhook 分发卡片图片
 - 文件夹批量、标签筛选、一篇笔记多模板和稳定目录更新
 - YAML 属性和 `obsidian://xhs-text-card` 外部调用
 - 编辑器、文件列表、命令面板和 Ribbon 多种入口
@@ -182,17 +195,18 @@ npm run check:all
 - [安装和使用方法](docs/USAGE.md)
 - [完整产品功能](docs/PRODUCT.md)
 - [自定义模板功能与实现说明](docs/CUSTOM_TEMPLATES.md)
+- [微信与多平台草稿说明](docs/PUBLISHING.md)
 - [测试与发布检查](docs/TESTING.md)
 
 ## 权限、隐私与披露
 
-- 不需要账户、登录、付费或订阅，不包含广告或遥测
-- 笔记解析、分页和图片生成均在本地完成，不会上传笔记内容
+- 卡片生成功能不需要账户；微信草稿功能需要用户自己的公众号 API 凭据
+- 卡片解析、分页和图片生成均在本地完成，不会上传笔记内容
 - 插件只读取用户主动选择的笔记及其引用资源，并把图片写入用户配置的
   Vault 输出目录；插件配置保存在 Obsidian 的插件数据目录
 - Markdown 中的远程图片会由客户端直接请求原图片地址，因此可能向该图片
   主机暴露常规网络请求信息；Vault 内图片不会产生此类请求
-- 插件不会自动发布内容到小红书或其他第三方平台
+- 只有主动执行平台草稿命令并确认后才会发送生成图片；不会发送 Markdown 原文，也不会自动发布
 - 智能封面不在当前功能或路线图中
 
 问题和建议请提交到

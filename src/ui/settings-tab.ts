@@ -1,6 +1,7 @@
 import {
   Notice,
   PluginSettingTab,
+  SecretComponent,
   Setting,
   type App,
   type SettingDefinitionItem,
@@ -64,7 +65,11 @@ export class XhsTextCardSettingTab extends PluginSettingTab {
           "系统分享",
           "上次生成",
           "导入预设",
-          "导出预设"
+          "导出预设",
+          "微信公众号",
+          "多平台发布",
+          "Webhook",
+          "AppSecret"
         ],
         render: (setting) => {
           setting.settingEl.empty();
@@ -543,6 +548,7 @@ export class XhsTextCardSettingTab extends PluginSettingTab {
           });
       });
 
+    this.renderPublishing(containerEl);
     this.renderLastGeneration(containerEl);
 
     this.renderBrandPresets(containerEl);
@@ -725,6 +731,108 @@ export class XhsTextCardSettingTab extends PluginSettingTab {
             this.refreshSettings();
           });
       });
+  }
+
+  private renderPublishing(containerEl: HTMLElement): void {
+    new Setting(containerEl)
+      .setName("平台草稿")
+      .setHeading();
+
+    new Setting(containerEl)
+      .setName("微信公众号 AppID")
+      .setDesc("需要公众号草稿与素材接口权限；插件仅在你点击保存草稿后联网")
+      .addText((text) => {
+        text
+          .setPlaceholder("wx...")
+          .setValue(this.plugin.settings.wechatAppId)
+          .onChange(async (value) => {
+            this.plugin.settings.wechatAppId = value.trim();
+            await this.plugin.saveSettings();
+          });
+      });
+
+    new Setting(containerEl)
+      .setName("微信公众号 AppSecret")
+      .setDesc("选择或创建 Obsidian SecretStorage 密钥；配置文件只保存密钥名称")
+      .addComponent((element) =>
+        new SecretComponent(this.app, element)
+          .setValue(this.plugin.settings.wechatAppSecretName)
+          .onChange(async (value) => {
+            this.plugin.settings.wechatAppSecretName = value;
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("微信默认开启评论")
+      .addToggle((toggle) => {
+        toggle
+          .setValue(this.plugin.settings.wechatOpenComments)
+          .onChange(async (value) => {
+            this.plugin.settings.wechatOpenComments = value;
+            await this.plugin.saveSettings();
+          });
+      });
+
+    new Setting(containerEl)
+      .setName("Webhook 目标平台")
+      .setDesc("用逗号分隔，例如：知乎, 掘金；自建服务负责转发到各平台草稿箱")
+      .addText((text) => {
+        text
+          .setValue(this.plugin.settings.webhookPlatformName)
+          .onChange(async (value) => {
+            this.plugin.settings.webhookPlatformName = value.trim();
+            await this.plugin.saveSettings();
+          });
+      });
+
+    new Setting(containerEl)
+      .setName("Webhook 默认作者")
+      .addText((text) => {
+        text
+          .setValue(this.plugin.settings.draftDefaultAuthor)
+          .onChange(async (value) => {
+            this.plugin.settings.draftDefaultAuthor = value.trim();
+            await this.plugin.saveSettings();
+          });
+      });
+
+    new Setting(containerEl)
+      .setName("Webhook 默认原文链接")
+      .addText((text) => {
+        text
+          .setPlaceholder("https://example.com/article")
+          .setValue(this.plugin.settings.draftDefaultSourceUrl)
+          .onChange(async (value) => {
+            this.plugin.settings.draftDefaultSourceUrl = value.trim();
+            await this.plugin.saveSettings();
+          });
+      });
+
+    new Setting(containerEl)
+      .setName("多平台 Webhook 地址")
+      .setDesc("只有主动保存草稿时才发送生成后的卡片图片")
+      .addText((text) => {
+        text
+          .setPlaceholder("https://publisher.example.com/drafts")
+          .setValue(this.plugin.settings.webhookEndpoint)
+          .onChange(async (value) => {
+            this.plugin.settings.webhookEndpoint = value.trim();
+            await this.plugin.saveSettings();
+          });
+      });
+
+    new Setting(containerEl)
+      .setName("Webhook 访问令牌")
+      .setDesc("可选，使用 Bearer Token；保存在 Obsidian SecretStorage")
+      .addComponent((element) =>
+        new SecretComponent(this.app, element)
+          .setValue(this.plugin.settings.webhookTokenSecretName)
+          .onChange(async (value) => {
+            this.plugin.settings.webhookTokenSecretName = value;
+            await this.plugin.saveSettings();
+          })
+      );
   }
 
   private renderCustomTemplates(

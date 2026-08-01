@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.4.0
+
+- Generate card images from the current note or selection and save them as a WeChat `newspic` image-message draft
+- Save the last generated card set to a platform draft without regenerating
+- Upload generated cards as permanent WeChat image assets; the first card becomes the cover automatically
+- Store AppSecret and Webhook tokens through Obsidian SecretStorage references
+- Send only generated card images and draft metadata to a user-configured multi-platform Webhook
+- Keep publishing explicit and draft-only; no automatic posting is performed
+
 ## 1.3.0
 
 - Remember the last successful generation and provide open/share commands

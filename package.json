@@ -1,7 +1,7 @@
 {
   "name": "obsidian-xhs-text-card",
-  "version": "1.3.0",
-  "description": "Generate Xiaohongshu-style image cards from Obsidian notes.",
+  "version": "1.4.0",
+  "description": "Generate image cards from Obsidian notes and explicitly save generated images to WeChat or custom platform drafts.",
   "main": "main.js",
   "type": "module",
   "scripts": {
@@ -14,14 +14,17 @@
     "test:markdown": "node scripts/test-markdown.mjs",
     "test:config": "node scripts/test-config.mjs",
     "test:rendering": "node scripts/test-rendering.mjs",
-    "test": "npm run test:pagination && npm run test:markdown && npm run test:config && npm run test:rendering",
+    "test:publishing": "node scripts/test-publishing.mjs",
+    "test": "npm run test:pagination && npm run test:markdown && npm run test:config && npm run test:rendering && npm run test:publishing",
     "check:all": "npm test && npm run build && npm run preview:build"
   },
   "keywords": [
     "obsidian",
     "markdown",
     "xiaohongshu",
-    "image"
+    "image",
+    "wechat",
+    "publishing"
   ],
   "license": "MIT",
   "author": "monvhh",

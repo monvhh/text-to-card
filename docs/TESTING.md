@@ -14,6 +14,7 @@ node --check main.js
 - 笔记章节嵌入、图片、Callout、任务和脚注测试
 - 文件夹/标签/模板筛选与自定义模板 JSON 测试
 - 设置迁移、预设包、质量检查和表格行布局测试
+- 微信 API 请求、卡片图片正文、multipart 图片、草稿负载和多平台 Webhook 模拟测试
 - TypeScript 类型检查和 Obsidian 生产构建
 - Vite 浏览器预览生产构建
 
@@ -52,6 +53,10 @@ npm run preview
 14. 远程图片和包含空格的 Vault 图片可导出，失败图片出现在质量警告中
 15. 上次生成可以打开和分享，清除记录不会删除图片
 16. 预设导出后可重新导入，已有同 ID 预设被更新且其他预设保留
+17. 未点击“保存草稿”时不产生发布网络请求
+18. 使用测试公众号保存草稿，全部卡片按顺序显示且首图封面正常
+19. Webhook 测试服务收到 `save_image_draft`、目标平台和 cards，且不包含 Markdown/HTML
+20. AppSecret/Token 不出现在插件 `data.json`、控制台或错误提示中
 
 ## 自动发布
 

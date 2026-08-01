@@ -85,6 +85,16 @@ Text to Card for Obsidian 是一款本地运行的内容生产插件，将 Markd
 - `obsidian://xhs-text-card` URI 外部调用
 - YAML `xhs-*` 属性按笔记覆盖参数
 
+### 平台草稿
+
+- **Make cards and save to platform draft** 先按当前默认设置生成卡片，再保存图片草稿
+- **Save last generated cards to platform draft** 直接复用上次生成的全部图片
+- 微信公众号：使用 `newspic` 图片消息结构保存贴图草稿，而不是图文文章
+- 每张卡片上传为永久图片素材，最多 20 张，首张图片由微信自动作为封面
+- 通用多平台 Webhook：只传递草稿元数据、目标平台列表和生成后的卡片图片
+- AppSecret 与 Webhook Token 使用 Obsidian SecretStorage，不进入插件 `data.json`
+- 所有发布操作必须由用户主动确认，只保存草稿，不调用正式发布接口
+
 ### 入口
 
 - 命令面板：**Make cards**、**Preview cards**、**Make cards in batch**
@@ -94,6 +104,8 @@ Text to Card for Obsidian 是一款本地运行的内容生产插件，将 Markd
 - 文件列表右键菜单
 - Obsidian URI
 - **Open last generated cards** 与 **Share last generated cards**
+- **Make cards and save to platform draft**
+- **Save last generated cards to platform draft**
 
 ## 版本路线完成情况
 
@@ -106,12 +118,15 @@ Text to Card for Obsidian 是一款本地运行的内容生产插件，将 Markd
 - v1.1 设置迁移、生成进度、错误提示和自动发布：已完成
 - v1.2 表格、Mermaid、图片兼容和质量检查：已完成
 - v1.3 上次生成记录、预设导入导出和系统分享：已完成
+- v1.4 微信公众号草稿与多平台 Webhook：已完成
 
 智能封面不在当前产品范围或路线图中。
 
 ## 当前边界
 
 - 不直接登录或自动发布到小红书
+- 微信公众号需要账号具备草稿/素材接口权限，并正确配置接口 IP 白名单
+- 微信贴图要求所有卡片成为公众号永久图片素材，可能增加素材库占用
 - 远程图片无法访问或超过 12 MB 时会保留原地址，并由质量检查提示加载失败
 - 自定义字体使用设备已经安装的字体族，不内嵌字体文件
 - 移动端生成大量高清页面时可能受到设备内存限制
@@ -120,7 +135,7 @@ Text to Card for Obsidian 是一款本地运行的内容生产插件，将 Markd
 ## 隐私
 
 - 不收集遥测信息
-- 不向网络发送笔记、文件名或生成图片
+- 卡片生成不会向第三方上传笔记；只有用户主动保存平台草稿时才发送生成后的图片
 - 只读取用户选择的笔记、嵌入内容和批量范围
 - 只在确认生成后写入指定 Vault 目录
 
@@ -138,6 +153,12 @@ src/
 │   ├── remote-images.ts
 │   ├── preset-files.ts
 │   └── post-generation.ts
+├── publishing/
+│   ├── publishing-service.ts
+│   ├── wechat-api.ts
+│   ├── webhook-publisher.ts
+│   ├── render-draft-html.ts
+│   └── image-conversion.ts
 ├── ui/
 │   ├── generate-modal.ts
 │   ├── page-editor-modal.ts

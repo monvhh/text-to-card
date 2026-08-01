@@ -1,9 +1,9 @@
 {
   "id": "xhs-text-card",
   "name": "Text to Card",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "minAppVersion": "1.12.7",
-  "description": "Generate multi-page image cards from Obsidian notes with 2:3, 3:4 and 9:16 layouts, local preview and one-command export.",
+  "description": "Generate multi-page image cards from notes and explicitly save generated images to WeChat or custom platform drafts.",
   "author": "monvhh",
   "isDesktopOnly": false
 }
